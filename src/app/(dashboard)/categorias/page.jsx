@@ -298,7 +298,15 @@ const CategoriesPage = () => {
                  >
                     <div style={{ height: '160px', position: 'relative', overflow: 'hidden', backgroundColor: '#F8FAFC' }}>
                        {cat.image_url || cat.image ? (
-                         <img src={cat.image_url || cat.image} alt={cat.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                         <img 
+                           src={(cat.image_url || cat.image).startsWith('http') ? (cat.image_url || cat.image) : `https://api.kayparts.co/storage/${cat.image_url || cat.image}`} 
+                           alt={cat.name} 
+                           style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                           onError={(e) => {
+                             e.target.onerror = null; // Prevent infinite loop
+                             e.target.src = 'https://placehold.co/600x400/F1F5F9/94A3B8?text=Error+Cargando+Imagen';
+                           }}
+                         />
                        ) : (
                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                            <LayoutGrid size={32} color="#CBD5E1" opacity={0.5} />
