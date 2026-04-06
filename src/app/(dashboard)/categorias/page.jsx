@@ -312,6 +312,13 @@ const CategoriesPage = () => {
                            <LayoutGrid size={32} color="#CBD5E1" opacity={0.5} />
                          </div>
                        )}
+                       
+                       {/* DEPURADOR TEMPORAL - PARA VER LAS RUTAS DEVUELTAS POR LA API */}
+                       <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', backgroundColor: 'rgba(0,0,0,0.8)', color: '#10B981', fontSize: '9px', padding: '4px 8px', fontFamily: 'monospace', zIndex: 10, wordBreak: 'break-all' }}>
+                         api_url: {cat.image_url ? String(cat.image_url) : 'null'} <br/>
+                         api_img: {cat.image ? String(cat.image) : 'null'}
+                       </div>
+
                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.6) 100%)' }}></div>
                     </div>
                     <div style={{ padding: '20px', position: 'relative', flex: 1, display: 'flex', flexDirection: 'column' }}>
