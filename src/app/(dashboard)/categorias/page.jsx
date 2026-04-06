@@ -297,27 +297,40 @@ const CategoriesPage = () => {
                    style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', backgroundColor: 'white', display: 'flex', flexDirection: 'column' }}
                  >
                     <div style={{ height: '160px', position: 'relative', overflow: 'hidden', backgroundColor: '#F8FAFC' }}>
-                       {cat.image_url || cat.image ? (
-                         <img 
-                           src={(cat.image_url || cat.image).startsWith('http') ? (cat.image_url || cat.image) : `https://api.kayparts.co/storage/${cat.image_url || cat.image}`} 
-                           alt={cat.name} 
-                           style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                           onError={(e) => {
-                             e.target.onerror = null; // Prevent infinite loop
-                             e.target.src = 'https://placehold.co/600x400/F1F5F9/94A3B8?text=Error+Cargando+Imagen';
-                           }}
-                         />
-                       ) : (
-                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                           <LayoutGrid size={32} color="#CBD5E1" opacity={0.5} />
-                         </div>
-                       )}
-                       
-                       {/* DEPURADOR TEMPORAL - PARA VER LAS RUTAS DEVUELTAS POR LA API */}
-                       <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', backgroundColor: 'rgba(0,0,0,0.8)', color: '#10B981', fontSize: '9px', padding: '4px 8px', fontFamily: 'monospace', zIndex: 10, wordBreak: 'break-all' }}>
-                         api_url: {cat.image_url ? String(cat.image_url) : 'null'} <br/>
-                         api_img: {cat.image ? String(cat.image) : 'null'}
-                       </div>
+                       {(() => {
+                         const rawUrl = cat.image_url || cat.image;
+                         if (!rawUrl) {
+                           return (
+                             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                               <LayoutGrid size={32} color="#CBD5E1" opacity={0.5} />
+                             </div>
+                           );
+                         }
+
+                         let finalUrl = String(rawUrl);
+                         // Sanitizar por si Laravel devuelve localhost
+                         if (finalUrl.includes('localhost')) {
+                           finalUrl = finalUrl.replace(/http:\/\/localhost(:\d+)?/, 'https://api.kayparts.co');
+                         } else if (finalUrl.includes('127.0.0.1')) {
+                           finalUrl = finalUrl.replace(/http:\/\/127\.0\.0\.1(:\d+)?/, 'https://api.kayparts.co');
+                         } else if (!finalUrl.startsWith('http')) {
+                           finalUrl = `https://api.kayparts.co/storage/${finalUrl}`;
+                         }
+
+                         return (
+                           <img 
+                             src={finalUrl} 
+                             alt={cat.name} 
+                             style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                             onError={(e) => {
+                               e.target.onerror = null;
+                               // Pintar la URL defectuosa en la caja gris para saber qué está fallando
+                               const shortUrl = finalUrl.length > 35 ? '...' + finalUrl.substring(finalUrl.length - 35) : finalUrl;
+                               e.target.src = `https://placehold.co/600x400/F1F5F9/94A3B8?text=${encodeURIComponent('404 FALLO EN:\n' + shortUrl)}`;
+                             }}
+                           />
+                         );
+                       })()}
 
                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.6) 100%)' }}></div>
                     </div>
