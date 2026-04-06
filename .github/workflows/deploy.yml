@@ -8,6 +8,8 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # ¡ESTO ES LA MAGIA AUTOMÁTICA! Le da permisos al robot sin necesidad del usuario.
     steps:
       - name: Checkout 🛎️
         uses: actions/checkout@v4
@@ -27,7 +29,7 @@ jobs:
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: out # Subir el contenido de la carpeta de construcción
-          branch: deploy # A esta rama
-          token: ${{ secrets.GH_TOKEN }} # Token de acceso personal para permisos superiores
-          clean: true # Limpia la rama de destino antes de subir
+          folder: out
+          branch: deploy
+          token: ${{ secrets.GITHUB_TOKEN }} # Usa el token automático nativo de GitHub
+          clean: true
