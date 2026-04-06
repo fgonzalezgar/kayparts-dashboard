@@ -35,11 +35,22 @@ const LoginForm = () => {
       await login({ email, password });
       router.replace(from);
     } catch (err) {
-      const msg =
-        err.response?.data?.message ||
-        err.response?.data?.error   ||
-        err.message                 ||
-        'Credenciales incorrectas. Intenta de nuevo.';
+      let msg = 'Credenciales incorrectas. Intenta de nuevo.';
+      
+      // Manejar estructura de validaciones de Laravel (ValidationException 422)
+      if (err.response?.data?.errors) {
+        const firstField = Object.keys(err.response.data.errors)[0];
+        if (firstField && err.response.data.errors[firstField].length > 0) {
+          msg = err.response.data.errors[firstField][0];
+        }
+      } else if (err.response?.data?.message) {
+        msg = err.response.data.message;
+      } else if (err.response?.data?.error) {
+        msg = err.response.data.error;
+      } else if (err.message) {
+        msg = err.message;
+      }
+      
       setError(msg);
     } finally {
       setLoading(false);

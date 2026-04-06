@@ -1,13 +1,14 @@
 import axios from 'axios';
 
 // ── Base configuration ───────────────────────────────────────────────────────
-const API_BASE_URL = 'https://api.kayparts.co/api/';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.kayparts.co/api/';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
+    'X-Requested-With': 'XMLHttpRequest', // Best practice para Laravel: fuerza retornos JSON en validaciones
   },
   timeout: 15000,
 });
@@ -32,8 +33,8 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
 
-    // Token expirado o inválido → limpiar sesión
-    if (status === 401 && typeof window !== 'undefined') {
+    // 401 Unauthorized o 419 Page Expired (CSRF) → limpiar sesión y redirigir
+    if ((status === 401 || status === 419) && typeof window !== 'undefined') {
       localStorage.removeItem('kayparts_token');
       localStorage.removeItem('kayparts_user');
       // Redirigir solo si no estamos ya en /login
