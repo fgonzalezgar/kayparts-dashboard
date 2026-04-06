@@ -72,7 +72,7 @@ const LoginForm = () => {
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(135deg, rgba(0,0,0,0.85) 0%, rgba(227,27,35,0.1) 100%)' }} />
 
         {/* Live feed overlay */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ position: 'absolute', top: '40px', left: '40px', zIndex: 3 }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} style={{ position: 'absolute', top: '40px', left: '40px', zIndex: 3 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 10px #10B981' }} />
             <p style={{ color: 'white', fontSize: '12px', fontWeight: '800', letterSpacing: '2px' }}>SYSTEM ONLINE - NODE_TX_004</p>
@@ -83,7 +83,7 @@ const LoginForm = () => {
                 key={i}
                 initial={{ x: -20, opacity: 0 }}
                 animate={{ x: 0, opacity: 0.7 }}
-                transition={{ delay: 1 + i * 0.2, repeat: Infinity, repeatType: 'reverse', duration: 3 }}
+                transition={{ delay: 0.2 + i * 0.1, repeat: Infinity, repeatType: 'reverse', duration: 2 }}
                 style={{ color: '#10B981', fontSize: '10px', fontFamily: 'monospace' }}
               >
                 {'>'} {text}
@@ -92,7 +92,7 @@ const LoginForm = () => {
           </div>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} style={{ position: 'relative', zIndex: 2 }}>
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={{ position: 'relative', zIndex: 2 }}>
           <h1 className="title-font" style={{ color: 'white', fontSize: '56px', marginBottom: '8px', lineHeight: '0.9' }}>KAYPARTS</h1>
           <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '16px', letterSpacing: '3px', fontWeight: '300', marginTop: '20px' }}>PRECISION ENGINEERING SOLUTIONS</p>
           <div style={{ width: '80px', height: '4px', background: 'var(--primary)', marginTop: '24px' }} />
@@ -113,7 +113,7 @@ const LoginForm = () => {
           width: '100%'
         }}
       >
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="login-card" style={{ width: '100%', maxWidth: '440px' }}>
+        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }} className="login-card" style={{ width: '100%', maxWidth: '440px' }}>
 
           {/* Logo */}
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
