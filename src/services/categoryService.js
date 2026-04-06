@@ -29,7 +29,11 @@ const categoryService = {
       formData.append('image', data.image);
     }
 
-    const response = await api.post('categories', formData);
+    const response = await api.post('categories', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
 
     return response.data.data || response.data;
   },
