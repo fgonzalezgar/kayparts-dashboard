@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import categoryService from '@/services/categoryService';
+import { ASSETS_BASE_URL } from '@/services/api';
 
 const CategoriesPage = () => {
   const [categories, setCategories] = useState([]);
@@ -308,13 +309,33 @@ const CategoriesPage = () => {
                          }
 
                          let finalUrl = String(rawUrl);
-                         // Sanitizar por si Laravel devuelve localhost
-                         if (finalUrl.includes('localhost')) {
-                           finalUrl = finalUrl.replace(/http:\/\/localhost(:\d+)?/, 'https://api.kayparts.co');
-                         } else if (finalUrl.includes('127.0.0.1')) {
-                           finalUrl = finalUrl.replace(/http:\/\/127\.0\.0\.1(:\d+)?/, 'https://api.kayparts.co');
-                         } else if (!finalUrl.startsWith('http')) {
-                           finalUrl = `https://api.kayparts.co/storage/${finalUrl}`;
+
+                         // 1. Convert local domains to production asset domain
+                         if (finalUrl.includes('localhost') || finalUrl.includes('127.0.0.1')) {
+                           finalUrl = finalUrl.replace(/http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/*/, ASSETS_BASE_URL);
+                         }
+
+                         // 2. Handle relative paths or path corrections
+                         if (!finalUrl.startsWith('http')) {
+                           // Remove leading slashes if any
+                           const cleanPath = finalUrl.replace(/^\/+/, '');
+                           
+                           if (cleanPath.startsWith('categories/')) {
+                             finalUrl = `${ASSETS_BASE_URL}uploads/${cleanPath}`;
+                           } else if (cleanPath.startsWith('storage/')) {
+                             finalUrl = `${ASSETS_BASE_URL}${cleanPath.replace('storage/', 'uploads/')}`;
+                           } else {
+                             finalUrl = `${ASSETS_BASE_URL}uploads/categories/${cleanPath}`;
+                           }
+                         } else {
+                           // If it is absolute but points to /storage/, redirect to /uploads/
+                           if (finalUrl.includes('/storage/')) {
+                             finalUrl = finalUrl.replace('/storage/', '/uploads/');
+                           }
+                           // Ensure it includes /categories/ if it's a category image
+                           if (finalUrl.includes('/uploads/') && !finalUrl.includes('/categories/')) {
+                             finalUrl = finalUrl.replace('/uploads/', '/uploads/categories/');
+                           }
                          }
 
                          return (
