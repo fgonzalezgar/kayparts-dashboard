@@ -317,22 +317,20 @@ const CategoriesPage = () => {
 
                          // 2. Handle relative paths or path corrections
                          if (!finalUrl.startsWith('http')) {
-                           // Remove leading slashes if any
-                           const cleanPath = finalUrl.replace(/^\/+/, '');
+                           // Remove leading slashes and segments that might be duplicated
+                           const cleanPath = finalUrl
+                             .replace(/^\/+/, '')
+                             .replace('public/', '')
+                             .replace('uploads/', '')
+                             .replace('categories/', '');
                            
-                           if (cleanPath.startsWith('categories/')) {
-                             finalUrl = `${ASSETS_BASE_URL}uploads/${cleanPath}`;
-                           } else if (cleanPath.startsWith('storage/')) {
-                             finalUrl = `${ASSETS_BASE_URL}${cleanPath.replace('storage/', 'uploads/')}`;
-                           } else {
-                             finalUrl = `${ASSETS_BASE_URL}uploads/categories/${cleanPath}`;
-                           }
+                           finalUrl = `${ASSETS_BASE_URL}uploads/categories/${cleanPath}`;
                          } else {
-                           // If it is absolute but points to /storage/, redirect to /uploads/
-                           if (finalUrl.includes('/storage/')) {
-                             finalUrl = finalUrl.replace('/storage/', '/uploads/');
+                           // If it already has a protocol, ensure it's using the /public/ path if it points to uploads
+                           if (finalUrl.includes('/uploads/') && !finalUrl.includes('/public/')) {
+                             finalUrl = finalUrl.replace('/uploads/', '/public/uploads/');
                            }
-                           // Ensure it includes /categories/ if it's a category image
+                           // Ensure it has /categories/
                            if (finalUrl.includes('/uploads/') && !finalUrl.includes('/categories/')) {
                              finalUrl = finalUrl.replace('/uploads/', '/uploads/categories/');
                            }
@@ -345,7 +343,12 @@ const CategoriesPage = () => {
                              style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                              onError={(e) => {
                                e.target.onerror = null;
-                               // Pintar la URL defectuosa en la caja gris para saber qué está fallando
+                               // Smart Fallback Trace: If the primary fails, try to remove /public/ as a last resort
+                               if (finalUrl.includes('/public/')) {
+                                  const fallbackUrl = finalUrl.replace('/public/', '/');
+                                  e.target.src = fallbackUrl;
+                                  return;
+                               }
                                const shortUrl = finalUrl.length > 35 ? '...' + finalUrl.substring(finalUrl.length - 35) : finalUrl;
                                e.target.src = `https://placehold.co/600x400/F1F5F9/94A3B8?text=${encodeURIComponent('404 FALLO EN:\n' + shortUrl)}`;
                              }}
