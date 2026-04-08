@@ -44,6 +44,33 @@ const categoryService = {
    */
   async deleteCategory(id) {
     await api.delete(`categories/${id}`);
+  },
+
+  /**
+   * Actualizar una categoría existente (soporta cambio de imagen).
+   * Laravel requiere POST + _method=PUT para procesar multipart/form-data en un update.
+   * @param {number|string} id - ID de la categoría
+   * @param {Object} data - Datos a actualizar (name, description, image)
+   * @returns {Promise<Object>} Categoría actualizada
+   */
+  async updateCategory(id, data) {
+    const formData = new FormData();
+    formData.append('_method', 'PUT'); // Truco para Laravel con multipart/form-data
+    
+    if (data.name) formData.append('name', data.name);
+    if (data.description !== undefined) formData.append('description', data.description || '');
+    
+    if (data.image instanceof File) {
+      formData.append('image', data.image);
+    }
+
+    const response = await api.post(`categories/${id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    return response.data.data || response.data;
   }
 };
 

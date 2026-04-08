@@ -29,7 +29,9 @@ const CategoriesPage = () => {
   const [description, setDescription] = useState('');
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [editingCategory, setEditingCategory] = useState(null); // null means "Create Mode"
   const fileInputRef = useRef(null);
+  const formRef = useRef(null);
 
   const fetchCategories = async () => {
     setIsLoading(true);
@@ -82,24 +84,30 @@ const CategoriesPage = () => {
     setError(null);
 
     try {
-      await categoryService.createCategory({
-        name,
-        description,
-        image: imageFile
-      });
+      if (editingCategory) {
+        // Update existing category
+        await categoryService.updateCategory(editingCategory.id, {
+          name,
+          description,
+          image: imageFile
+        });
+      } else {
+        // Create new category
+        await categoryService.createCategory({
+          name,
+          description,
+          image: imageFile
+        });
+      }
       
-      // Clear form
-      setName('');
-      setDescription('');
-      setImageFile(null);
-      setImagePreview(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      // Clear form and reset state
+      handleCancelEdit();
 
       // Refresh list
       await fetchCategories();
     } catch (err) {
       console.error('Error in handleSubmit:', err);
-      let msg = 'Error al crear la categoría.';
+      let msg = editingCategory ? 'Error al actualizar la categoría.' : 'Error al crear la categoría.';
       if (err.response?.data?.errors) {
         const firstField = Object.keys(err.response.data.errors)[0];
         if (firstField && err.response.data.errors[firstField].length > 0) {
@@ -116,6 +124,30 @@ const CategoriesPage = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleEdit = (category) => {
+    setEditingCategory(category);
+    setName(category.name || '');
+    setDescription(category.description || '');
+    setImageFile(null);
+    setImagePreview(null);
+    setError(null);
+    
+    // Smooth scroll to form
+    if (formRef.current) {
+      formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCategory(null);
+    setName('');
+    setDescription('');
+    setImageFile(null);
+    setImagePreview(null);
+    setError(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleDelete = async (id) => {
@@ -167,13 +199,18 @@ const CategoriesPage = () => {
         {/* Left Column: Form */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <motion.div 
+            ref={formRef}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="glass" 
             style={{ padding: '32px', borderRadius: 'var(--radius-lg)', backgroundColor: 'white' }}
           >
-            <h2 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '8px', color: 'black' }}>Nueva Categoría</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '24px' }}>Configure technical product groupings</p>
+            <h2 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '8px', color: 'black' }}>
+              {editingCategory ? 'Editar Categoría' : 'Nueva Categoría'}
+            </h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '24px' }}>
+              {editingCategory ? `Modificando ID: ${editingCategory.id}` : 'Configure technical product groupings'}
+            </p>
             
             <AnimatePresence>
               {error && (
@@ -235,16 +272,29 @@ const CategoriesPage = () => {
                 </div>
               </div>
 
-              <button 
-                type="button"
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="btn-primary" 
-                style={{ height: '50px', fontSize: '14px', width: '100%', borderRadius: '30px', marginTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: isSubmitting ? 0.7 : 1 }}
-              >
-                {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                {isSubmitting ? 'Guardando...' : 'Guardar Categoría'}
-              </button>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button 
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className="btn-primary" 
+                  style={{ height: '50px', fontSize: '14px', flex: 1, borderRadius: '30px', marginTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: isSubmitting ? 0.7 : 1 }}
+                >
+                  {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                  {isSubmitting ? 'Guardando...' : editingCategory ? 'Actualizar Categoría' : 'Guardar Categoría'}
+                </button>
+
+                {editingCategory && (
+                  <button 
+                    type="button"
+                    onClick={handleCancelEdit}
+                    disabled={isSubmitting}
+                    style={{ height: '50px', fontSize: '14px', padding: '0 20px', borderRadius: '30px', marginTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F5F9', color: 'black', border: 'none', cursor: 'pointer' }}
+                  >
+                    Cancelar
+                  </button>
+                )}
+              </div>
             </div>
           </motion.div>
 
@@ -374,6 +424,7 @@ const CategoriesPage = () => {
                        </p>
                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
                           <button 
+                            onClick={() => handleEdit(cat)}
                             style={{ backgroundColor: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', cursor: 'pointer' }}
                           >
                             Editar
