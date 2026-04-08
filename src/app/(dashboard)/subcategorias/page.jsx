@@ -46,17 +46,42 @@ const SubcategoriesPage = () => {
   }, []);
 
   const fetchData = async () => {
+    setLoading(true);
+    
+    // Fetch categories (parent) independently
     try {
-      setLoading(true);
-      const [subsData, catsData] = await Promise.all([
-        subcategoryService.getSubcategories(),
-        categoryService.getCategories()
-      ]);
-      setSubcategories(subsData);
-      setCategories(catsData);
+      const catsData = await categoryService.getCategories();
+      console.log('Categories loaded in component:', catsData);
+      
+      // Strict array check to ensure the select can render
+      if (Array.isArray(catsData)) {
+        setCategories(catsData);
+      } else if (catsData && Array.isArray(catsData.data)) {
+        setCategories(catsData.data);
+      } else {
+        console.warn('Categories data is not an array:', catsData);
+        setCategories([]);
+      }
     } catch (error) {
-      console.error('Error fetching data:', error);
-      alert('Error al cargar datos. Por favor intenta de nuevo.');
+      console.error('Error fetching categories:', error);
+      // Optional: set a local error state to show in the UI
+    }
+
+    // Fetch subcategories independently
+    try {
+      const subsData = await subcategoryService.getSubcategories();
+      console.log('Subcategories loaded in component:', subsData);
+      
+      if (Array.isArray(subsData)) {
+        setSubcategories(subsData);
+      } else if (subsData && Array.isArray(subsData.data)) {
+        setSubcategories(subsData.data);
+      } else {
+        setSubcategories([]);
+      }
+    } catch (error) {
+      console.error('Error fetching subcategories:', error);
+      // We don't alert here to avoid blocking the UI
     } finally {
       setLoading(false);
     }

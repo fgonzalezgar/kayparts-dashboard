@@ -5,11 +5,17 @@ const categoryService = {
    * Obtener todas las categorías.
    * @returns {Promise<Array>} Lista de categorías
    */
-  async getCategories() {
-    const response = await api.get('categories');
-    // Normalmente Laravel devuelve los datos paginados en response.data.data, 
-    // pero si no está paginado podría estar en response.data.
-    return response.data.data || response.data;
+   async getCategories() {
+    try {
+      const response = await api.get('categories');
+      console.log('API categories response:', response.data);
+      // Normalmente Laravel devuelve los datos paginados en response.data.data, 
+      // pero si no está paginado podría estar en response.data.
+      return response.data.data || response.data;
+    } catch (error) {
+      console.error('Error in getCategories:', error);
+      throw error;
+    }
   },
 
   /**

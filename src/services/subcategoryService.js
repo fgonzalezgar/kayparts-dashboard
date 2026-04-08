@@ -8,8 +8,15 @@ const subcategoryService = {
    */
   async getSubcategories(categoryId = null) {
     const params = categoryId ? { category_id: categoryId } : {};
-    const response = await api.get('subcategories', { params });
-    return response.data.data || response.data;
+    try {
+      const response = await api.get('subcategories', { params });
+      console.log('API subcategories response:', response.data);
+      // Handle Laravel's nested data structure
+      return response.data.data || response.data;
+    } catch (error) {
+      console.error('Error in getSubcategories:', error);
+      throw error;
+    }
   },
 
   /**
@@ -72,6 +79,7 @@ const subcategoryService = {
       }
     });
 
+    console.log('API update subcategory response:', response.data);
     return response.data.data || response.data;
   }
 };
