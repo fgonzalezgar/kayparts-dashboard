@@ -322,13 +322,17 @@ const CategoriesPage = () => {
                              .replace(/^\/+/, '')
                              .replace('public/', '')
                              .replace('uploads/', '')
-                             .replace('categories/', '');
+                             .replace('categories/', '')
+                             .replace('storage/', '');
                            
                            finalUrl = `${ASSETS_BASE_URL}uploads/categories/${cleanPath}`;
                          } else {
-                           // If it already has a protocol, ensure it's using the /public/ path if it points to uploads
+                           // If it already has a protocol, ensure it's using the /public/ path
+                           if (finalUrl.includes('/storage/')) {
+                              finalUrl = finalUrl.replace('/storage/', '/public/uploads/');
+                           }
                            if (finalUrl.includes('/uploads/') && !finalUrl.includes('/public/')) {
-                             finalUrl = finalUrl.replace('/uploads/', '/public/uploads/');
+                              finalUrl = finalUrl.replace('/uploads/', '/public/uploads/');
                            }
                            // Ensure it has /categories/
                            if (finalUrl.includes('/uploads/') && !finalUrl.includes('/categories/')) {
@@ -340,6 +344,7 @@ const CategoriesPage = () => {
                            <img 
                              src={finalUrl} 
                              alt={cat.name} 
+                             title={`URL: ${finalUrl}`}
                              style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                              onError={(e) => {
                                e.target.onerror = null;
