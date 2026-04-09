@@ -9,12 +9,19 @@ const subcategoryService = {
   async getSubcategories(categoryId = null) {
     const params = categoryId ? { category_id: categoryId } : {};
     try {
+      // Intentamos con plural estándar
       const response = await api.get('subcategories', { params });
-      console.log('API subcategories response:', response.data);
-      // Handle Laravel's nested data structure
       return response.data.data || response.data;
     } catch (error) {
-      console.error('Error in getSubcategories:', error);
+      if (error.response?.status === 404) {
+        // Fallback a versión con guion si el primero falla
+        try {
+          const fbResponse = await api.get('sub-categories', { params });
+          return fbResponse.data.data || fbResponse.data;
+        } catch (fbError) {
+          throw error; // Lanzamos el error original si el fallback también falla
+        }
+      }
       throw error;
     }
   },
@@ -37,13 +44,28 @@ const subcategoryService = {
       formData.append('image', data.image);
     }
 
-    const response = await api.post('subcategories', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
+    const tryPost = async (endpoint) => {
+      return await api.post(endpoint, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+    };
 
-    return response.data.data || response.data;
+    try {
+      const response = await tryPost('subcategories');
+      return response.data.data || response.data;
+    } catch (error) {
+      if (error.response?.status === 404) {
+        try {
+          const fbResponse = await tryPost('sub-categories');
+          return fbResponse.data.data || fbResponse.data;
+        } catch (fbError) {
+          throw error;
+        }
+      }
+      throw error;
+    }
   },
 
   /**
@@ -72,15 +94,30 @@ const subcategoryService = {
       formData.append('image', data.image);
     }
 
-    // El endpoint de actualización suele ser POST /{id} con _method=PUT para archivos en Laravel
-    const response = await api.post(`subcategories/${id}`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
+    const tryPost = async (endpoint) => {
+      return await api.post(`${endpoint}/${id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+    };
 
-    console.log('API update subcategory response:', response.data);
-    return response.data.data || response.data;
+    try {
+      const response = await tryPost('subcategories');
+      console.log('API update subcategory response:', response.data);
+      return response.data.data || response.data;
+    } catch (error) {
+      if (error.response?.status === 404) {
+        try {
+          const fbResponse = await tryPost('sub-categories');
+          console.log('API update subcategory response (fallback):', fbResponse.data);
+          return fbResponse.data.data || fbResponse.data;
+        } catch (fbError) {
+          throw error;
+        }
+      }
+      throw error;
+    }
   }
 };
 

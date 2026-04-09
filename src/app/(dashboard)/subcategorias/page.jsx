@@ -134,7 +134,22 @@ const SubcategoriesPage = () => {
       fetchData();
     } catch (error) {
       console.error('Error saving subcategory:', error);
-      alert('Error al guardar la subcategoría.');
+      
+      let errorMsg = 'Error al guardar la subcategoría.';
+      
+      if (error.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        const firstError = Object.values(errors)[0];
+        if (Array.isArray(firstError) && firstError.length > 0) {
+          errorMsg = firstError[0];
+        }
+      } else if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      } else if (error.response?.status === 404) {
+        errorMsg = 'Error 404: El endpoint de subcategorías no fue encontrado en el servidor.';
+      }
+      
+      alert(errorMsg);
     } finally {
       setSubmitting(false);
     }
