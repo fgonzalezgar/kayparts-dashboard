@@ -21,7 +21,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import subcategoryService from '@/services/subcategoryService';
 import categoryService from '@/services/categoryService';
-import { ASSETS_BASE_URL } from '@/services/api';
+import { ASSETS_BASE_URL, getAssetUrl } from '@/services/api';
 
 const SubcategoriesPage = () => {
   const [subcategories, setSubcategories] = useState([]);
@@ -164,7 +164,7 @@ const SubcategoriesPage = () => {
       description: sub.description || '',
       image: null
     });
-    setImagePreview(sub.image_url ? `${ASSETS_BASE_URL}storage/${sub.image_url}` : null);
+    setImagePreview(getAssetUrl(sub.image_url || sub.image_path));
     // Scroll to form
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -431,8 +431,8 @@ const SubcategoriesPage = () => {
                              >
                                 <td style={{ padding: '16px 12px' }}>
                                    <div style={{ width: '44px', height: '44px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #E2E8F0', position: 'relative', backgroundColor: '#F1F5F9' }}>
-                                      {sub.image_url ? (
-                                        <img src={`${ASSETS_BASE_URL}storage/${sub.image_url}`} alt={sub.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                      {getAssetUrl(sub.image_url || sub.image_path) ? (
+                                        <img src={getAssetUrl(sub.image_url || sub.image_path)} alt={sub.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                       ) : (
                                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#CBD5E1' }}>
                                           <Upload size={16} />

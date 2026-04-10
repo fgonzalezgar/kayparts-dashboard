@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import categoryService from '@/services/categoryService';
-import { ASSETS_BASE_URL } from '@/services/api';
+import { ASSETS_BASE_URL, getAssetUrl } from '@/services/api';
 
 const CategoriesPage = () => {
   const [categories, setCategories] = useState([]);
@@ -349,67 +349,35 @@ const CategoriesPage = () => {
                  >
                     <div style={{ height: '160px', position: 'relative', overflow: 'hidden', backgroundColor: '#F8FAFC' }}>
                        {(() => {
-                         const rawUrl = cat.image_url || cat.image;
-                         if (!rawUrl) {
-                           return (
-                             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                               <LayoutGrid size={32} color="#CBD5E1" opacity={0.5} />
-                             </div>
-                           );
-                         }
+                          const finalUrl = getAssetUrl(cat.image_url || cat.image);
+                          if (!finalUrl) {
+                            return (
+                              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <LayoutGrid size={32} color="#CBD5E1" opacity={0.5} />
+                              </div>
+                            );
+                          }
 
-                         let finalUrl = String(rawUrl);
-
-                         // 1. Convert local domains to production asset domain
-                         if (finalUrl.includes('localhost') || finalUrl.includes('127.0.0.1')) {
-                           finalUrl = finalUrl.replace(/http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/*/, ASSETS_BASE_URL);
-                         }
-
-                         // 2. Handle relative paths or path corrections
-                         if (!finalUrl.startsWith('http')) {
-                           // Remove leading slashes and segments that might be duplicated
-                           const cleanPath = finalUrl
-                             .replace(/^\/+/, '')
-                             .replace('public/', '')
-                             .replace('uploads/', '')
-                             .replace('categories/', '')
-                             .replace('storage/', '');
-                           
-                           finalUrl = `${ASSETS_BASE_URL}uploads/categories/${cleanPath}`;
-                         } else {
-                           // If it already has a protocol, ensure it's using the /public/ path
-                           if (finalUrl.includes('/storage/')) {
-                              finalUrl = finalUrl.replace('/storage/', '/public/uploads/');
-                           }
-                           if (finalUrl.includes('/uploads/') && !finalUrl.includes('/public/')) {
-                              finalUrl = finalUrl.replace('/uploads/', '/public/uploads/');
-                           }
-                           // Ensure it has /categories/
-                           if (finalUrl.includes('/uploads/') && !finalUrl.includes('/categories/')) {
-                             finalUrl = finalUrl.replace('/uploads/', '/uploads/categories/');
-                           }
-                         }
-
-                         return (
-                           <img 
-                             src={finalUrl} 
-                             alt={cat.name} 
-                             title={`URL: ${finalUrl}`}
-                             style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                             onError={(e) => {
-                               e.target.onerror = null;
-                               // Smart Fallback Trace: If the primary fails, try to remove /public/ as a last resort
-                               if (finalUrl.includes('/public/')) {
-                                  const fallbackUrl = finalUrl.replace('/public/', '/');
-                                  e.target.src = fallbackUrl;
-                                  return;
-                               }
-                               const shortUrl = finalUrl.length > 35 ? '...' + finalUrl.substring(finalUrl.length - 35) : finalUrl;
-                               e.target.src = `https://placehold.co/600x400/F1F5F9/94A3B8?text=${encodeURIComponent('404 FALLO EN:\n' + shortUrl)}`;
-                             }}
-                           />
-                         );
-                       })()}
+                          return (
+                            <img 
+                              src={finalUrl} 
+                              alt={cat.name} 
+                              title={`URL: ${finalUrl}`}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                // Smart Fallback Trace: If the primary fails, try to remove /public/ as a last resort
+                                if (finalUrl.includes('/public/')) {
+                                   const fallbackUrl = finalUrl.replace('/public/', '/');
+                                   e.target.src = fallbackUrl;
+                                   return;
+                                }
+                                const shortUrl = finalUrl.length > 35 ? '...' + finalUrl.substring(finalUrl.length - 35) : finalUrl;
+                                e.target.src = `https://placehold.co/600x400/F1F5F9/94A3B8?text=${encodeURIComponent('404 FALLO EN:\n' + shortUrl)}`;
+                              }}
+                            />
+                          );
+                        })()}
 
                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.6) 100%)' }}></div>
                     </div>

@@ -3,6 +3,36 @@ import axios from 'axios';
 // ── Base configuration ───────────────────────────────────────────────────────
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.kayparts.co/api/';
 export const ASSETS_BASE_URL = API_BASE_URL.replace('/api/', '/public/');
+export const BASE_URL = API_BASE_URL.replace('/api/', '/');
+
+/**
+ * Helper to get the correct URL for an asset (category image, subcategory image, etc.)
+ * handles absolute URLs from API, relative paths, and provides fallbacks.
+ */
+export const getAssetUrl = (path, type = 'uploads') => {
+  if (!path) return null;
+  if (typeof path !== 'string') return null;
+  
+  // If it's already an absolute URL, return it
+  if (path.startsWith('http')) {
+    // Resilience: ensure it uses production domains if it came from localhost
+    if (path.includes('localhost') || path.includes('127.0.0.1')) {
+      return path.replace(/http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/*/, BASE_URL);
+    }
+    return path;
+  }
+
+  // Clean the path from common prefixes that might be duplicated
+  const cleanPath = path
+    .replace(/^\/+/, '')
+    .replace('public/', '')
+    .replace('storage/', '')
+    .replace('uploads/', '');
+
+  // If type is uploads, we use the BASE_URL/uploads/ path
+  // (which maps to public/uploads/ in the server)
+  return `${BASE_URL}uploads/${cleanPath}`;
+};
 
 const api = axios.create({
   baseURL: API_BASE_URL,
