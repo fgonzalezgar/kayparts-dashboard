@@ -29,9 +29,9 @@ export const getAssetUrl = (path, type = 'uploads') => {
     .replace('storage/', '')
     .replace('uploads/', '');
 
-  // If type is uploads, we use the BASE_URL/uploads/ path
+  // If type is uploads, we use the ASSETS_BASE_URL/uploads/ path
   // (which maps to public/uploads/ in the server)
-  return `${BASE_URL}uploads/${cleanPath}`;
+  return `${ASSETS_BASE_URL}uploads/${cleanPath}`;
 };
 
 const api = axios.create({
