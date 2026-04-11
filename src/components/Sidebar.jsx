@@ -41,14 +41,15 @@ const Sidebar = () => {
       label: 'Productos', 
       path: '/productos',
       hasSubmenu: true,
-      subItems: [
-        { icon: <LayoutList size={16} />, label: 'Inventario', path: '/productos' },
-        { icon: <Car size={16} />, label: 'Marcas Vehículos', path: '/marcas' },
-        { icon: <LayoutList size={16} />, label: 'Modelos', path: '/modelos' },
-        { icon: <Layers size={16} />, label: 'Categorías', path: '/categorias' },
-        { icon: <GitBranch size={16} />, label: 'Subcategorías', path: '/subcategorias' },
-        { icon: <PlusCircle size={16} />, label: 'Nuevo Producto', path: '/productos/nuevo' },
-      ]
+        subItems: [
+          { icon: <LayoutList size={16} />, label: 'Inventario', path: '/productos' },
+          { icon: <Car size={16} />, label: 'Marcas Vehículos', path: '/marcas' },
+          { icon: <Package size={16} />, label: 'Marcas Productos', path: '/marcas-productos' },
+          { icon: <LayoutList size={16} />, label: 'Modelos', path: '/modelos' },
+          { icon: <Layers size={16} />, label: 'Categorías', path: '/categorias' },
+          { icon: <GitBranch size={16} />, label: 'Subcategorías', path: '/subcategorias' },
+          { icon: <PlusCircle size={16} />, label: 'Nuevo Producto', path: '/productos/nuevo' },
+        ]
     },
     { icon: <Truck size={20} />, label: 'Envíos', path: '/envios' },
     { icon: <Users size={20} />, label: 'Proveedores', path: '/proveedores' },
