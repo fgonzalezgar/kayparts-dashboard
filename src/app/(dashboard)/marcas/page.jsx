@@ -131,7 +131,7 @@ const BrandsPage = () => {
       is_active: brand.is_active,
       image: null
     });
-    setImagePreview(getAssetUrl(brand.image_url || brand.image_path));
+    setImagePreview(getAssetUrl(brand.image || brand.image_url || brand.image_path) || null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -413,13 +413,18 @@ const BrandsPage = () => {
                                 <td style={{ padding: '16px 12px' }}>
                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                       <div style={{ width: '48px', height: '48px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #E2E8F0', position: 'relative', backgroundColor: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                         {getAssetUrl(brand.image_url || brand.image_path) ? (
-                                           <img src={getAssetUrl(brand.image_url || brand.image_path)} alt={brand.name} style={{ width: '80%', height: '80%', objectFit: 'contain' }} />
-                                         ) : (
-                                           <div style={{ color: '#CBD5E1' }}>
-                                             <Upload size={20} />
-                                           </div>
-                                         )}
+                                         {/* API retorna 'image' con la URL completa de la imagen */}
+                                          {(brand.image || brand.image_url || brand.image_path) ? (
+                                            <img
+                                              src={getAssetUrl(brand.image || brand.image_url || brand.image_path)}
+                                              alt={brand.name}
+                                              style={{ width: '80%', height: '80%', objectFit: 'contain' }}
+                                            />
+                                          ) : (
+                                            <div style={{ color: '#CBD5E1' }}>
+                                              <Upload size={20} />
+                                            </div>
+                                          )}
                                       </div>
                                       <p style={{ fontSize: '14px', fontWeight: '800' }}>{brand.name}</p>
                                    </div>

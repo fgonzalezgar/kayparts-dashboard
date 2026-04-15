@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Search, 
   Bell, 
@@ -18,7 +18,9 @@ import {
   Loader2,
   CheckCircle,
   XCircle,
-  MapPin
+  MapPin,
+  AlertCircle,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import productBrandService from '@/services/productBrandService';
@@ -32,6 +34,7 @@ const ProductBrandsPage = () => {
   const [currentId, setCurrentId] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [toast, setToast] = useState(null); // { type: 'success'|'error', message }
   
   const [formData, setFormData] = useState({
     name: '',
@@ -40,6 +43,11 @@ const ProductBrandsPage = () => {
     is_active: true,
     image: null
   });
+
+  const showToast = useCallback((type, message) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 4000);
+  }, []);
 
   // Fetch data on mount
   useEffect(() => {
@@ -50,15 +58,10 @@ const ProductBrandsPage = () => {
     setLoading(true);
     try {
       const data = await productBrandService.getBrands();
-      if (Array.isArray(data)) {
-        setBrands(data);
-      } else if (data && Array.isArray(data.data)) {
-        setBrands(data.data);
-      } else {
-        setBrands([]);
-      }
+      setBrands(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching product brands:', error);
+      showToast('error', 'Error cargando las marcas de productos. Verifica tu conexión.');
     } finally {
       setLoading(false);
     }
@@ -99,8 +102,8 @@ const ProductBrandsPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name) {
-      alert('El nombre es obligatorio');
+    if (!formData.name.trim()) {
+      showToast('error', 'El nombre de la marca es obligatorio.');
       return;
     }
 
@@ -108,14 +111,19 @@ const ProductBrandsPage = () => {
       setSubmitting(true);
       if (isEditing) {
         await productBrandService.updateBrand(currentId, formData);
+        showToast('success', 'Marca de producto actualizada exitosamente.');
       } else {
         await productBrandService.createBrand(formData);
+        showToast('success', 'Marca de producto creada exitosamente.');
       }
       resetForm();
       fetchData();
     } catch (error) {
       console.error('Error saving product brand:', error);
-      alert(error.response?.data?.message || 'Error al guardar la marca de producto');
+      const msg = error.response?.data?.message 
+        || error.response?.data?.errors 
+        || 'Error al guardar la marca de producto.';
+      showToast('error', typeof msg === 'object' ? JSON.stringify(msg) : msg);
     } finally {
       setSubmitting(false);
     }
@@ -128,24 +136,26 @@ const ProductBrandsPage = () => {
       name: brand.name,
       description: brand.description || '',
       location: brand.location || '',
-      is_active: brand.is_active,
+      is_active: !!brand.is_active,
       image: null
     });
-    setImagePreview(getAssetUrl(brand.image_url || brand.image_path));
+    // La API retorna el campo 'image' con la URL completa de la imagen
+    const imageUrl = brand.image || brand.image_url || brand.image_path || null;
+    setImagePreview(imageUrl ? getAssetUrl(imageUrl) : null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('¿Estás seguro de eliminar esta marca de producto?')) return;
+    if (!confirm('¿Estás seguro de eliminar esta marca de producto? Esta acción no se puede deshacer.')) return;
     
     try {
       setLoading(true);
       await productBrandService.deleteBrand(id);
+      showToast('success', 'Marca de producto eliminada.');
       fetchData();
     } catch (error) {
       console.error('Error deleting product brand:', error);
-      alert('Error al eliminar la marca de producto.');
-    } finally {
+      showToast('error', error.response?.data?.message || 'Error al eliminar la marca de producto.');
       setLoading(false);
     }
   };
@@ -157,6 +167,41 @@ const ProductBrandsPage = () => {
 
   return (
     <>
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            key="toast"
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            style={{
+              position: 'fixed',
+              top: '24px',
+              right: '24px',
+              zIndex: 9999,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '14px 20px',
+              borderRadius: '12px',
+              backgroundColor: toast.type === 'success' ? '#ECFDF5' : '#FEF2F2',
+              border: `1px solid ${toast.type === 'success' ? '#6EE7B7' : '#FECACA'}`,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+              maxWidth: '400px'
+            }}
+          >
+            {toast.type === 'success'
+              ? <CheckCircle size={18} color="#059669" />
+              : <AlertCircle size={18} color="#DC2626" />}
+            <span style={{ fontSize: '13px', fontWeight: '600', color: toast.type === 'success' ? '#065F46' : '#991B1B', flex: 1 }}>
+              {toast.message}
+            </span>
+            <X size={16} style={{ cursor: 'pointer', color: '#9CA3AF' }} onClick={() => setToast(null)} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -413,13 +458,18 @@ const ProductBrandsPage = () => {
                                 <td style={{ padding: '16px 12px' }}>
                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                       <div style={{ width: '48px', height: '48px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #E2E8F0', position: 'relative', backgroundColor: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                         {getAssetUrl(brand.image_url || brand.image_path) ? (
-                                           <img src={getAssetUrl(brand.image_url || brand.image_path)} alt={brand.name} style={{ width: '80%', height: '80%', objectFit: 'contain' }} />
-                                         ) : (
-                                           <div style={{ color: '#CBD5E1' }}>
-                                             <Upload size={20} />
-                                           </div>
-                                         )}
+                                         {/* API retorna 'image' con la URL completa de la imagen */}
+                                          {(brand.image || brand.image_url || brand.image_path) ? (
+                                            <img
+                                              src={getAssetUrl(brand.image || brand.image_url || brand.image_path)}
+                                              alt={brand.name}
+                                              style={{ width: '80%', height: '80%', objectFit: 'contain' }}
+                                            />
+                                          ) : (
+                                            <div style={{ color: '#CBD5E1' }}>
+                                              <Upload size={20} />
+                                            </div>
+                                          )}
                                       </div>
                                       <p style={{ fontSize: '14px', fontWeight: '800' }}>{brand.name}</p>
                                    </div>
