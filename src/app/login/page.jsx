@@ -24,7 +24,12 @@ const LoginForm = () => {
   const [error, setError]               = useState(null);
 
   // Redirigir a la página que intentaban acceder, o al dashboard por defecto
-  const from = searchParams.get('from') || '/dashboard';
+  let from = '/dashboard';
+  try {
+    from = searchParams?.get('from') || '/dashboard';
+  } catch (e) {
+    console.error('Error reading search params');
+  }
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -312,13 +317,18 @@ const LoginForm = () => {
 
 const LoginPage = () => {
   return (
-    <Suspense fallback={
-      <div style={{ display: "flex", height: "100vh", alignItems: "center", justifyContent: "center", backgroundColor: "white" }}>
-        <div style={{ width: "40px", height: "40px", border: "4px solid #F1F5F9", borderTopColor: "var(--primary)", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-      </div>
-    }>
-      <LoginForm />
-    </Suspense>
+    <div style={{ backgroundColor: 'white', minHeight: '100vh' }}>
+      <Suspense fallback={
+        <div style={{ display: "flex", height: "100vh", alignItems: "center", justifyContent: "center", backgroundColor: "white" }}>
+          <div style={{ width: "40px", height: "40px", border: "4px solid #F1F5F9", borderTopColor: "var(--primary)", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+          <style dangerouslySetInnerHTML={{ __html: `
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+          `}} />
+        </div>
+      }>
+        <LoginForm />
+      </Suspense>
+    </div>
   );
 }
 

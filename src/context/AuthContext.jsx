@@ -14,26 +14,42 @@ export const AuthProvider = ({ children }) => {
   // Rehydrate session from localStorage on first mount
   useEffect(() => {
     const initAuth = async () => {
-      const storedToken = localStorage.getItem('kayparts_token');
-      const storedUser = localStorage.getItem('kayparts_user');
+      // Seguridad: Timer de emergencia para evitar que la app se quede en blanco
+      const safetyTimeout = setTimeout(() => {
+        setLoading(false);
+      }, 5000); 
 
-      if (storedToken) {
-        setToken(storedToken);
-        try {
-          // Intentar validar la sesión y traer el usuario actualizado
-          const userData = await authService.getMe();
-          const realUser = userData.user || userData.data || userData;
-          setUser(realUser);
-          localStorage.setItem('kayparts_user', JSON.stringify(realUser));
-        } catch (error) {
-          // Si el token es inválido (401), el interceptor ya limpia localStorage
-          if (storedUser && error.response?.status !== 401) {
-            // Fallback si falla la red pero no es error de auth
-            setUser(JSON.parse(storedUser));
+      try {
+        const storedToken = localStorage.getItem('kayparts_token');
+        const storedUser = localStorage.getItem('kayparts_user');
+
+        if (storedToken) {
+          setToken(storedToken);
+          try {
+            // Intentar validar la sesión y traer el usuario actualizado
+            const userData = await authService.getMe();
+            const realUser = userData.user || userData.data || userData;
+            setUser(realUser);
+            localStorage.setItem('kayparts_user', JSON.stringify(realUser));
+          } catch (error) {
+            console.error('Session validation failed:', error);
+            // Fallback si el token guardado aún parece válido pero la red falló
+            if (storedUser && error.response?.status !== 401) {
+              try {
+                setUser(JSON.parse(storedUser));
+              } catch (e) {
+                console.error('Corrupt stored user data');
+                localStorage.removeItem('kayparts_user');
+              }
+            }
           }
         }
+      } catch (err) {
+        console.error('Auth initialization error:', err);
+      } finally {
+        clearTimeout(safetyTimeout);
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     initAuth();
