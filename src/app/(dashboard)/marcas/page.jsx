@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Search, 
   Bell, 
@@ -17,8 +17,10 @@ import {
   List,
   Loader2,
   CheckCircle,
+  AlertCircle,
   XCircle,
-  MapPin
+  MapPin,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import brandService from '@/services/brandService';
@@ -32,6 +34,7 @@ const BrandsPage = () => {
   const [currentId, setCurrentId] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [toast, setToast] = useState(null); // { type: 'success'|'error', message }
   
   const [formData, setFormData] = useState({
     name: '',
@@ -40,6 +43,11 @@ const BrandsPage = () => {
     is_active: true,
     image: null
   });
+
+  const showToast = useCallback((type, message) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 4000);
+  }, []);
 
   // Fetch data on mount
   useEffect(() => {
@@ -100,7 +108,7 @@ const BrandsPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name) {
-      alert('El nombre es obligatorio');
+      showToast('error', 'El nombre es obligatorio');
       return;
     }
 
@@ -108,14 +116,22 @@ const BrandsPage = () => {
       setSubmitting(true);
       if (isEditing) {
         await brandService.updateBrand(currentId, formData);
+        showToast('success', 'Marca actualizada exitosamente.');
       } else {
         await brandService.createBrand(formData);
+        showToast('success', 'Marca creada exitosamente.');
       }
       resetForm();
       fetchData();
     } catch (error) {
       console.error('Error saving brand:', error);
-      alert(error.response?.data?.message || 'Error al guardar la marca');
+      let msg = 'Error al guardar la marca.';
+      if (error.response?.data?.errors) {
+        msg = Object.values(error.response.data.errors).flat()[0] || msg;
+      } else if (error.response?.data?.message) {
+        msg = error.response.data.message;
+      }
+      showToast('error', msg);
     } finally {
       setSubmitting(false);
     }
@@ -128,10 +144,10 @@ const BrandsPage = () => {
       name: brand.name,
       description: brand.description || '',
       location: brand.location || '',
-      is_active: brand.is_active,
+      is_active: !!brand.is_active,
       image: null
     });
-    setImagePreview(getAssetUrl(brand.image || brand.image_url || brand.image_path) || null);
+    setImagePreview(getAssetUrl(brand.image || brand.image_url || brand.image_path));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -139,14 +155,12 @@ const BrandsPage = () => {
     if (!confirm('¿Estás seguro de eliminar esta marca?')) return;
     
     try {
-      setLoading(true);
       await brandService.deleteBrand(id);
+      showToast('success', 'Marca eliminada.');
       fetchData();
     } catch (error) {
       console.error('Error deleting brand:', error);
-      alert('Error al eliminar la marca.');
-    } finally {
-      setLoading(false);
+      showToast('error', 'Error al eliminar la marca.');
     }
   };
 
@@ -157,6 +171,41 @@ const BrandsPage = () => {
 
   return (
     <>
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            key="toast"
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            style={{
+              position: 'fixed',
+              top: '24px',
+              right: '24px',
+              zIndex: 9999,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '14px 20px',
+              borderRadius: '12px',
+              backgroundColor: toast.type === 'success' ? '#ECFDF5' : '#FEF2F2',
+              border: `1px solid ${toast.type === 'success' ? '#6EE7B7' : '#FECACA'}`,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+              maxWidth: '400px'
+            }}
+          >
+            {toast.type === 'success'
+              ? <CheckCircle size={18} color="#059669" />
+              : <AlertCircle size={18} color="#DC2626" />}
+            <span style={{ fontSize: '13px', fontWeight: '600', color: toast.type === 'success' ? '#065F46' : '#991B1B', flex: 1 }}>
+              {toast.message}
+            </span>
+            <X size={16} style={{ cursor: 'pointer', color: '#9CA3AF' }} onClick={() => setToast(null)} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -284,14 +333,14 @@ const BrandsPage = () => {
                            borderRadius: '24px' 
                         }}>
                            <span style={{ 
-                              position: 'absolute', 
-                              content: '""', 
-                              height: '18px', width: '18px', 
-                              left: formData.is_active ? '22px' : '4px', 
-                              bottom: '3px', 
-                              backgroundColor: 'white', 
-                              transition: '.4s', 
-                              borderRadius: '50%' 
+                               position: 'absolute', 
+                               content: '""', 
+                               height: '18px', width: '18px', 
+                               left: formData.is_active ? '22px' : '4px', 
+                               bottom: '3px', 
+                               backgroundColor: 'white', 
+                               transition: '.4s', 
+                               borderRadius: '50%' 
                            }}></span>
                         </span>
                      </label>
@@ -413,8 +462,7 @@ const BrandsPage = () => {
                                 <td style={{ padding: '16px 12px' }}>
                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                       <div style={{ width: '48px', height: '48px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #E2E8F0', position: 'relative', backgroundColor: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                         {/* API retorna 'image' con la URL completa de la imagen */}
-                                          {(brand.image || brand.image_url || brand.image_path) ? (
+                                          {getAssetUrl(brand.image || brand.image_url || brand.image_path) ? (
                                             <img
                                               src={getAssetUrl(brand.image || brand.image_url || brand.image_path)}
                                               alt={brand.name}
@@ -474,17 +522,6 @@ const BrandsPage = () => {
                       )}
                    </tbody>
                </table>
-
-               <div style={{ marginTop: 'auto', paddingTop: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                     Mostrando {filteredBrands.length} marcas
-                  </p>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                     <button style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1px solid #E2E8F0', backgroundColor: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'black' }}><ChevronLeft size={16} /></button>
-                     <button style={{ width: '32px', height: '32px', borderRadius: '6px', border: 'none', backgroundColor: 'var(--primary)', color: 'white', fontWeight: '800', fontSize: '12px' }}>1</button>
-                     <button style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1px solid #E2E8F0', backgroundColor: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'black' }}><ChevronRight size={16} /></button>
-                  </div>
-               </div>
             </div>
          </div>
       </div>
@@ -511,4 +548,4 @@ const BrandsPage = () => {
   );
 };
 
-export default BrandsPage;
+export default BrandsPage;BrandsPage;

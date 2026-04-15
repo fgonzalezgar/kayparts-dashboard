@@ -120,10 +120,17 @@ const ProductBrandsPage = () => {
       fetchData();
     } catch (error) {
       console.error('Error saving product brand:', error);
-      const msg = error.response?.data?.message 
-        || error.response?.data?.errors 
-        || 'Error al guardar la marca de producto.';
-      showToast('error', typeof msg === 'object' ? JSON.stringify(msg) : msg);
+      
+      let msg = 'Error al guardar la marca de producto.';
+      if (error.response?.data?.errors) {
+        // Capturar primer error de validación de Laravel
+        const errors = error.response.data.errors;
+        msg = Object.values(errors).flat()[0] || msg;
+      } else if (error.response?.data?.message) {
+        msg = error.response.data.message;
+      }
+      
+      showToast('error', msg);
     } finally {
       setSubmitting(false);
     }
@@ -139,9 +146,9 @@ const ProductBrandsPage = () => {
       is_active: !!brand.is_active,
       image: null
     });
-    // La API retorna el campo 'image' con la URL completa de la imagen
+    // La API retorna el campo 'image' con la URL completa o ruta de la imagen
     const imageUrl = brand.image || brand.image_url || brand.image_path || null;
-    setImagePreview(imageUrl ? getAssetUrl(imageUrl) : null);
+    setImagePreview(getAssetUrl(imageUrl));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

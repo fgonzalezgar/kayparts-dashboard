@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Search, 
   Bell, 
@@ -12,17 +12,20 @@ import {
   Save,
   Trash2,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  CheckCircle,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import categoryService from '@/services/categoryService';
-import { ASSETS_BASE_URL, getAssetUrl } from '@/services/api';
+import { getAssetUrl } from '@/services/api';
 
 const CategoriesPage = () => {
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [toast, setToast] = useState(null); // { type: 'success'|'error', message }
 
   // Form state
   const [name, setName] = useState('');
@@ -33,6 +36,11 @@ const CategoriesPage = () => {
   const fileInputRef = useRef(null);
   const formRef = useRef(null);
 
+  const showToast = useCallback((type, message) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 4000);
+  }, []);
+
   const fetchCategories = async () => {
     setIsLoading(true);
     try {
@@ -40,6 +48,7 @@ const CategoriesPage = () => {
       setCategories(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching categories:', err);
+      showToast('error', 'No se pudieron cargar las categorías.');
     } finally {
       setIsLoading(false);
     }
@@ -76,7 +85,7 @@ const CategoriesPage = () => {
     if (e) e.preventDefault();
     
     if (!name.trim()) {
-      setError('El nombre de la categoría es requerido.');
+      showToast('error', 'El nombre de la categoría es requerido.');
       return;
     }
 
@@ -85,42 +94,32 @@ const CategoriesPage = () => {
 
     try {
       if (editingCategory) {
-        // Update existing category
         await categoryService.updateCategory(editingCategory.id, {
           name,
           description,
           image: imageFile
         });
+        showToast('success', 'Categoría actualizada exitosamente.');
       } else {
-        // Create new category
         await categoryService.createCategory({
           name,
           description,
           image: imageFile
         });
+        showToast('success', 'Categoría creada exitosamente.');
       }
       
-      // Clear form and reset state
       handleCancelEdit();
-
-      // Refresh list
       await fetchCategories();
     } catch (err) {
       console.error('Error in handleSubmit:', err);
-      let msg = editingCategory ? 'Error al actualizar la categoría.' : 'Error al crear la categoría.';
+      let msg = 'Error al procesar la categoría.';
       if (err.response?.data?.errors) {
-        const firstField = Object.keys(err.response.data.errors)[0];
-        if (firstField && err.response.data.errors[firstField].length > 0) {
-          msg = err.response.data.errors[firstField][0];
-        }
+        msg = Object.values(err.response.data.errors).flat()[0] || msg;
       } else if (err.response?.data?.message) {
         msg = err.response.data.message;
-      } else if (err.response?.data?.error) {
-        msg = err.response.data.error;
-      } else if (err.message) {
-        msg = err.message;
       }
-      setError(msg);
+      showToast('error', msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -131,10 +130,9 @@ const CategoriesPage = () => {
     setName(category.name || '');
     setDescription(category.description || '');
     setImageFile(null);
-    setImagePreview(null);
+    setImagePreview(getAssetUrl(category.image || category.image_url));
     setError(null);
     
-    // Smooth scroll to form
     if (formRef.current) {
       formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -154,16 +152,52 @@ const CategoriesPage = () => {
     if (window.confirm('¿Desea eliminar esta categoría por completo?')) {
       try {
         await categoryService.deleteCategory(id);
+        showToast('success', 'Categoría eliminada.');
         setCategories(categories.filter(cat => cat.id !== id));
       } catch (err) {
         console.error('Error deleting category:', err);
-        alert('Ocurrió un error al intentar eliminar la categoría.');
+        showToast('error', 'Ocurrió un error al intentar eliminar la categoría.');
       }
     }
   };
 
   return (
     <>
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            key="toast"
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            style={{
+              position: 'fixed',
+              top: '24px',
+              right: '24px',
+              zIndex: 9999,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '14px 20px',
+              borderRadius: '12px',
+              backgroundColor: toast.type === 'success' ? '#ECFDF5' : '#FEF2F2',
+              border: `1px solid ${toast.type === 'success' ? '#6EE7B7' : '#FECACA'}`,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+              maxWidth: '400px'
+            }}
+          >
+            {toast.type === 'success'
+              ? <CheckCircle size={18} color="#059669" />
+              : <AlertCircle size={18} color="#DC2626" />}
+            <span style={{ fontSize: '13px', fontWeight: '600', color: toast.type === 'success' ? '#065F46' : '#991B1B', flex: 1 }}>
+              {toast.message}
+            </span>
+            <X size={16} style={{ cursor: 'pointer', color: '#9CA3AF' }} onClick={() => setToast(null)} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
         <div>
           <h1 className="title-font" style={{ fontSize: '28px' }}>Categorías</h1>
@@ -175,7 +209,7 @@ const CategoriesPage = () => {
             <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={18} />
             <input 
               type="text" 
-              placeholder="Search components..." 
+              placeholder="Buscar componentes..." 
               style={{ 
                 width: '100%', 
                 padding: '10px 12px 10px 40px', 
@@ -189,6 +223,7 @@ const CategoriesPage = () => {
             />
           </div>
           <Bell size={20} color="var(--text-muted)" />
+          <Settings size={20} color="var(--text-muted)" />
           <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <User size={20} color="var(--text-muted)" />
           </div>
@@ -209,26 +244,12 @@ const CategoriesPage = () => {
               {editingCategory ? 'Editar Categoría' : 'Nueva Categoría'}
             </h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '24px' }}>
-              {editingCategory ? `Modificando ID: ${editingCategory.id}` : 'Configure technical product groupings'}
+              {editingCategory ? `Modificando ID: ${editingCategory.id}` : 'Configuración técnica de productos'}
             </p>
             
-            <AnimatePresence>
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  style={{ backgroundColor: '#FEF2F2', borderLeft: '4px solid #EF4444', padding: '12px', borderRadius: '6px', marginBottom: '20px', display: 'flex', gap: '8px', alignItems: 'flex-start' }}
-                >
-                  <AlertCircle size={16} color="#EF4444" style={{ marginTop: '2px' }} />
-                  <p style={{ fontSize: '12px', color: '#B91C1C', fontWeight: '600', lineHeight: '1.4' }}>{error}</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Category Name</label>
+                <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Nombre de Categoría</label>
                 <input 
                   type="text" 
                   value={name}
@@ -240,19 +261,19 @@ const CategoriesPage = () => {
               </div>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Description</label>
+                <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Descripción</label>
                 <textarea 
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   disabled={isSubmitting}
-                  placeholder="Technical specifications and range details..." 
+                  placeholder="Especificaciones técnicas y rango..." 
                   rows="4" 
                   style={{ width: '100%', padding: '14px', borderRadius: '8px', border: 'none', backgroundColor: '#F0F7FF', fontSize: '14px', outline: 'none', resize: 'none', color: 'black' }} 
                 />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Category Thumbnail</label>
+                <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Imagen de Categoría</label>
                 
                 <div style={{ backgroundColor: '#F1F5F9', padding: '20px', borderRadius: '12px', border: '2px dashed #CBD5E1' }} onDragOver={handleDragOver} onDrop={handleDrop}>
                   <input 
@@ -266,7 +287,7 @@ const CategoriesPage = () => {
                     {imagePreview ? (
                       <img src={imagePreview} alt="Preview" style={{ maxHeight: '90px', maxWidth: '100%', objectFit: 'contain' }} />
                     ) : (
-                      <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Vista previa de imagen</p>
+                      <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Vista previa</p>
                     )}
                   </div>
                 </div>
@@ -319,7 +340,7 @@ const CategoriesPage = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
              <div>
                 <h2 style={{ fontSize: '20px', fontWeight: '800', textTransform: 'uppercase', color: 'black' }}>Colecciones Activas</h2>
-                <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Catalogo sincronizado</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Catálogo sincronizado</p>
              </div>
              <div style={{ display: 'flex', gap: '12px' }}>
                 <div style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'white', cursor: 'pointer' }}><LayoutGrid size={18} color="black" /></div>
@@ -349,7 +370,7 @@ const CategoriesPage = () => {
                  >
                     <div style={{ height: '160px', position: 'relative', overflow: 'hidden', backgroundColor: '#F8FAFC' }}>
                        {(() => {
-                          const finalUrl = getAssetUrl(cat.image_url || cat.image);
+                          const finalUrl = getAssetUrl(cat.image || cat.image_url);
                           if (!finalUrl) {
                             return (
                               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -362,23 +383,18 @@ const CategoriesPage = () => {
                             <img 
                               src={finalUrl} 
                               alt={cat.name} 
-                              title={`URL: ${finalUrl}`}
                               style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                               onError={(e) => {
                                 e.target.onerror = null;
-                                // Smart Fallback Trace: If the primary fails, try to remove /public/ as a last resort
-                                if (finalUrl.includes('/public/')) {
-                                   const fallbackUrl = finalUrl.replace('/public/', '/');
-                                   e.target.src = fallbackUrl;
-                                   return;
-                                }
-                                const shortUrl = finalUrl.length > 35 ? '...' + finalUrl.substring(finalUrl.length - 35) : finalUrl;
-                                e.target.src = `https://placehold.co/600x400/F1F5F9/94A3B8?text=${encodeURIComponent('404 FALLO EN:\n' + shortUrl)}`;
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
                               }}
                             />
                           );
                         })()}
-
+                        <div style={{ width: '100%', height: '100%', display: 'none', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F5F9' }}>
+                           <AlertCircle size={32} color="#CBD5E1" />
+                        </div>
                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.6) 100%)' }}></div>
                     </div>
                     <div style={{ padding: '20px', position: 'relative', flex: 1, display: 'flex', flexDirection: 'column' }}>

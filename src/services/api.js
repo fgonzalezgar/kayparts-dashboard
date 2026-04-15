@@ -4,7 +4,7 @@ import axios from 'axios';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.kayparts.co/api/';
 export const BASE_URL = API_BASE_URL.replace('/api/', '/');
 // The uploads disk generates URLs like {APP_URL}/uploads/...
-export const ASSETS_BASE_URL = BASE_URL;
+export const ASSETS_BASE_URL = 'https://api.kayparts.co/';
 
 /**
  * Helper to get the correct URL for an asset (brand logo, category image, etc.)
@@ -15,11 +15,17 @@ export const getAssetUrl = (path) => {
   if (!path) return null;
   if (typeof path !== 'string') return null;
   
-  // If it's already an absolute URL, return it directly
+  // If it's already an absolute URL
   if (path.startsWith('http')) {
+    // Resilience: if the URL points to /storage/ on our domain, 
+    // it's likely broken due to symlink issues. Convert to /uploads/
+    if (path.includes('api.kayparts.co/storage/')) {
+      return path.replace('/storage/', '/uploads/');
+    }
+
     // Resilience: replace localhost URLs with production domain
     if (path.includes('localhost') || path.includes('127.0.0.1')) {
-      return path.replace(/http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/*/,  BASE_URL);
+      return path.replace(/http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/*/,  ASSETS_BASE_URL);
     }
     return path;
   }
@@ -31,8 +37,8 @@ export const getAssetUrl = (path) => {
     .replace(/^storage\//, '')
     .replace(/^uploads\//, '');
 
-  // Reconstruct using the base URL + uploads folder
-  return `${BASE_URL}uploads/${cleanPath}`;
+  // Reconstruct using the production base URL + uploads folder
+  return `${ASSETS_BASE_URL}uploads/${cleanPath}`;
 };
 
 const api = axios.create({

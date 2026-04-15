@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Search, 
   Bell, 
@@ -16,12 +16,15 @@ import {
   PlusCircle,
   HelpCircle,
   List,
-  Loader2
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import subcategoryService from '@/services/subcategoryService';
 import categoryService from '@/services/categoryService';
-import { ASSETS_BASE_URL, getAssetUrl } from '@/services/api';
+import { getAssetUrl } from '@/services/api';
 
 const SubcategoriesPage = () => {
   const [subcategories, setSubcategories] = useState([]);
@@ -32,6 +35,7 @@ const SubcategoriesPage = () => {
   const [currentId, setCurrentId] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [toast, setToast] = useState(null); // { type: 'success'|'error', message }
   
   const [formData, setFormData] = useState({
     category_id: '',
@@ -39,6 +43,11 @@ const SubcategoriesPage = () => {
     description: '',
     image: null
   });
+
+  const showToast = useCallback((type, message) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 4000);
+  }, []);
 
   // Fetch data on mount
   useEffect(() => {
@@ -51,27 +60,20 @@ const SubcategoriesPage = () => {
     // Fetch categories (parent) independently
     try {
       const catsData = await categoryService.getCategories();
-      console.log('Categories loaded in component:', catsData);
-      
-      // Strict array check to ensure the select can render
       if (Array.isArray(catsData)) {
         setCategories(catsData);
       } else if (catsData && Array.isArray(catsData.data)) {
         setCategories(catsData.data);
       } else {
-        console.warn('Categories data is not an array:', catsData);
         setCategories([]);
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
-      // Optional: set a local error state to show in the UI
     }
 
     // Fetch subcategories independently
     try {
       const subsData = await subcategoryService.getSubcategories();
-      console.log('Subcategories loaded in component:', subsData);
-      
       if (Array.isArray(subsData)) {
         setSubcategories(subsData);
       } else if (subsData && Array.isArray(subsData.data)) {
@@ -81,7 +83,6 @@ const SubcategoriesPage = () => {
       }
     } catch (error) {
       console.error('Error fetching subcategories:', error);
-      // We don't alert here to avoid blocking the UI
     } finally {
       setLoading(false);
     }
@@ -119,7 +120,7 @@ const SubcategoriesPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.category_id || !formData.name) {
-      alert('Categoría y nombre son obligatorios');
+      showToast('error', 'Categoría y nombre son obligatorios');
       return;
     }
 
@@ -127,29 +128,22 @@ const SubcategoriesPage = () => {
       setSubmitting(true);
       if (isEditing) {
         await subcategoryService.updateSubcategory(currentId, formData);
+        showToast('success', 'Subcategoría actualizada.');
       } else {
         await subcategoryService.createSubcategory(formData);
+        showToast('success', 'Subcategoría creada.');
       }
       resetForm();
       fetchData();
     } catch (error) {
       console.error('Error saving subcategory:', error);
-      
       let errorMsg = 'Error al guardar la subcategoría.';
-      
       if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        const firstError = Object.values(errors)[0];
-        if (Array.isArray(firstError) && firstError.length > 0) {
-          errorMsg = firstError[0];
-        }
+        errorMsg = Object.values(error.response.data.errors).flat()[0] || errorMsg;
       } else if (error.response?.data?.message) {
         errorMsg = error.response.data.message;
-      } else if (error.response?.status === 404) {
-        errorMsg = 'Error 404: El endpoint de subcategorías no fue encontrado en el servidor.';
       }
-      
-      alert(errorMsg);
+      showToast('error', errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -164,8 +158,7 @@ const SubcategoriesPage = () => {
       description: sub.description || '',
       image: null
     });
-    setImagePreview(getAssetUrl(sub.image_url || sub.image_path));
-    // Scroll to form
+    setImagePreview(getAssetUrl(sub.image || sub.image_url || sub.image_path));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -173,14 +166,12 @@ const SubcategoriesPage = () => {
     if (!confirm('¿Estás seguro de eliminar esta subcategoría?')) return;
     
     try {
-      setLoading(true);
       await subcategoryService.deleteSubcategory(id);
+      showToast('success', 'Subcategoría eliminada.');
       fetchData();
     } catch (error) {
       console.error('Error deleting subcategory:', error);
-      alert('Error al eliminar la subcategoría.');
-    } finally {
-      setLoading(false);
+      showToast('error', 'Error al eliminar la subcategoría.');
     }
   };
 
@@ -191,6 +182,41 @@ const SubcategoriesPage = () => {
 
   return (
     <>
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            key="toast"
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            style={{
+              position: 'fixed',
+              top: '24px',
+              right: '24px',
+              zIndex: 9999,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '14px 20px',
+              borderRadius: '12px',
+              backgroundColor: toast.type === 'success' ? '#ECFDF5' : '#FEF2F2',
+              border: `1px solid ${toast.type === 'success' ? '#6EE7B7' : '#FECACA'}`,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+              maxWidth: '400px'
+            }}
+          >
+            {toast.type === 'success'
+              ? <CheckCircle size={18} color="#059669" />
+              : <AlertCircle size={18} color="#DC2626" />}
+            <span style={{ fontSize: '13px', fontWeight: '600', color: toast.type === 'success' ? '#065F46' : '#991B1B', flex: 1 }}>
+              {toast.message}
+            </span>
+            <X size={16} style={{ cursor: 'pointer', color: '#9CA3AF' }} onClick={() => setToast(null)} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -209,7 +235,7 @@ const SubcategoriesPage = () => {
             <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={18} />
             <input 
               type="text" 
-              placeholder="Search subcategories..." 
+              placeholder="Buscar..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{ 
@@ -246,22 +272,22 @@ const SubcategoriesPage = () => {
                      {isEditing ? <Edit2 size={20} color="#2563EB" /> : <PlusCircle size={20} color="#EF4444" />}
                   </div>
                   <div style={{ flex: 1 }}>
-                     <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'black' }}>{isEditing ? 'Edit Subcategory' : 'New Subcategory'}</h2>
-                     <p style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>TECHNICAL SPECIFICATIONS</p>
+                     <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'black' }}>{isEditing ? 'Editar Subcategoría' : 'Nueva Subcategoría'}</h2>
+                     <p style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>ESPECIFICACIONES TÉCNICAS</p>
                   </div>
                   {isEditing && (
                     <button 
                       onClick={resetForm}
                       style={{ padding: '4px 12px', borderRadius: '4px', fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', border: '1px solid #E2E8F0', cursor: 'pointer' }}
                     >
-                      CANCEL
+                      CANCELAR
                     </button>
                   )}
                </div>
 
                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                     <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>PARENT CATEGORY</label>
+                     <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>CATEGORÍA PADRE</label>
                      <div style={{ position: 'relative' }}>
                         <select 
                           name="category_id"
@@ -270,7 +296,7 @@ const SubcategoriesPage = () => {
                           required
                           style={{ width: '100%', padding: '14px', borderRadius: '8px', border: 'none', backgroundColor: '#F0F7FF', fontSize: '14px', outline: 'none', appearance: 'none', fontWeight: '600', color: 'black' }}
                         >
-                           <option value="">Select a category</option>
+                           <option value="">Selecciona una categoría</option>
                            {categories.map(cat => (
                              <option key={cat.id} value={cat.id}>{cat.name}</option>
                            ))}
@@ -280,7 +306,7 @@ const SubcategoriesPage = () => {
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                     <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>SUBCATEGORY NAME</label>
+                     <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>NOMBRE DE SUBCATEGORÍA</label>
                      <input 
                        type="text" 
                        name="name"
@@ -293,19 +319,19 @@ const SubcategoriesPage = () => {
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                     <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>TECHNICAL DESCRIPTION</label>
+                     <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>DESCRIPCIÓN TÉCNICA</label>
                      <textarea 
                        name="description"
                        value={formData.description}
                        onChange={handleChange}
-                       placeholder="Describe the mechanical specifications or application scope..." 
+                       placeholder="Describe las especificaciones mecánicas o aplicación..." 
                        rows="4" 
                        style={{ width: '100%', padding: '14px', borderRadius: '8px', border: 'none', backgroundColor: '#F0F7FF', fontSize: '14px', outline: 'none', resize: 'none', color: 'black' }} 
                      />
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                     <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>VISUAL REFERENCE (IMAGE)</label>
+                     <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>REFERENCIA VISUAL (IMAGEN)</label>
                      <div 
                        onClick={() => document.getElementById('image-upload').click()}
                        style={{ 
@@ -328,8 +354,8 @@ const SubcategoriesPage = () => {
                           <img src={imagePreview} alt="Preview" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.3 }} />
                         ) : null}
                         <Upload size={24} color="var(--text-muted)" style={{ margin: '0 auto 8px', zIndex: 1 }} />
-                        <p style={{ fontSize: '12px', fontWeight: '700', marginBottom: '2px', color: 'black', zIndex: 1 }}>{formData.image ? formData.image.name : 'Drag & drop or click to upload'}</p>
-                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', zIndex: 1 }}>PNG, JPG UP TO 10MB</p>
+                        <p style={{ fontSize: '12px', fontWeight: '700', marginBottom: '2px', color: 'black', zIndex: 1 }}>{formData.image ? formData.image.name : 'Haz clic para subir imagen'}</p>
+                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', zIndex: 1 }}>PNG, JPG HASTA 10MB</p>
                         <input 
                           id="image-upload"
                           type="file" 
@@ -374,8 +400,8 @@ const SubcategoriesPage = () => {
                   <Edit2 size={16} color="white" />
                </div>
                <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '4px', color: 'black' }}>System Integrity Notice</h4>
-                  <p style={{ fontSize: '11px', color: '#92400E', lineHeight: '1.4' }}>Ensure the subcategory is unique within the parent category to prevent database indexing conflicts in the global parts catalog.</p>
+                  <h4 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '4px', color: 'black' }}>Aviso de Integridad</h4>
+                  <p style={{ fontSize: '11px', color: '#92400E', lineHeight: '1.4' }}>Asegúrate de que la subcategoría sea única dentro de la categoría padre para evitar conflictos en el catálogo global.</p>
                </div>
             </motion.div>
          </div>
@@ -384,7 +410,7 @@ const SubcategoriesPage = () => {
          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <div className="glass" style={{ padding: '32px', borderRadius: 'var(--radius-lg)', backgroundColor: 'white', flex: 1 }}>
                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-                  <h2 style={{ fontSize: '20px', fontWeight: '800', color: 'black' }}>Existing Subcategories</h2>
+                  <h2 style={{ fontSize: '20px', fontWeight: '800', color: 'black' }}>Subcategorías Existentes</h2>
                   <div style={{ display: 'flex', gap: '12px' }}>
                      <Filter size={18} color="var(--text-muted)" style={{ cursor: 'pointer' }} />
                      <List size={18} color="var(--text-muted)" style={{ cursor: 'pointer' }} />
@@ -394,11 +420,11 @@ const SubcategoriesPage = () => {
                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead>
                      <tr style={{ borderBottom: '1px solid #F1F5F9' }}>
-                        <th style={{ padding: '16px 12px', fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>REF / IMAGE</th>
-                        <th style={{ padding: '16px 12px', fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>SUBCATEGORY DETAILS</th>
-                        <th style={{ padding: '16px 12px', fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>PARENT</th>
-                        <th style={{ padding: '16px 12px', fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>ITEMS</th>
-                        <th style={{ padding: '16px 12px', fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>ACTIONS</th>
+                        <th style={{ padding: '16px 12px', fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>REF / IMAGEN</th>
+                        <th style={{ padding: '16px 12px', fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>DETALLES</th>
+                        <th style={{ padding: '16px 12px', fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>CATEGORÍA PADRE</th>
+                        <th style={{ padding: '16px 12px', fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>PRODUCTOS</th>
+                        <th style={{ padding: '16px 12px', fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>ACCIONES</th>
                      </tr>
                   </thead>
                   <tbody style={{ color: 'black' }}>
@@ -431,8 +457,8 @@ const SubcategoriesPage = () => {
                              >
                                 <td style={{ padding: '16px 12px' }}>
                                    <div style={{ width: '44px', height: '44px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #E2E8F0', position: 'relative', backgroundColor: '#F1F5F9' }}>
-                                      {getAssetUrl(sub.image_url || sub.image_path) ? (
-                                        <img src={getAssetUrl(sub.image_url || sub.image_path)} alt={sub.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                      {getAssetUrl(sub.image || sub.image_url || sub.image_path) ? (
+                                        <img src={getAssetUrl(sub.image || sub.image_url || sub.image_path)} alt={sub.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                       ) : (
                                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#CBD5E1' }}>
                                           <Upload size={16} />
@@ -446,7 +472,7 @@ const SubcategoriesPage = () => {
                                 </td>
                                 <td style={{ padding: '16px 12px' }}>
                                    <span style={{ fontSize: '9px', fontWeight: '800', padding: '4px 10px', borderRadius: '4px', backgroundColor: '#EFF6FF', color: '#1E40AF' }}>
-                                     {sub.category?.name || 'N/A'}
+                                      {sub.category?.name || 'N/A'}
                                    </span>
                                 </td>
                                 <td style={{ padding: '16px 12px' }}>
@@ -475,17 +501,6 @@ const SubcategoriesPage = () => {
                       )}
                    </tbody>
                </table>
-
-               <div style={{ marginTop: 'auto', paddingTop: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Showing 1 to 3 of 42 subcategories</p>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                     <button style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1px solid #E2E8F0', backgroundColor: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'black' }}><ChevronLeft size={16} /></button>
-                     <button style={{ width: '32px', height: '32px', borderRadius: '6px', border: 'none', backgroundColor: 'var(--primary)', color: 'white', fontWeight: '800', fontSize: '12px' }}>1</button>
-                     <button style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1px solid #E2E8F0', backgroundColor: 'white', fontWeight: '800', fontSize: '12px', color: 'var(--text-muted)' }}>2</button>
-                     <button style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1px solid #E2E8F0', backgroundColor: 'white', fontWeight: '800', fontSize: '12px', color: 'var(--text-muted)' }}>3</button>
-                     <button style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1px solid #E2E8F0', backgroundColor: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'black' }}><ChevronRight size={16} /></button>
-                  </div>
-               </div>
             </div>
          </div>
       </div>
