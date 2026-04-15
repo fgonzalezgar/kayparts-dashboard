@@ -5,7 +5,7 @@ const vehicleModelService = {
     try {
       const url = brandId ? `vehicle-models?brand_id=${brandId}` : 'vehicle-models';
       const response = await api.get(url);
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
       console.error('Error fetching vehicle models:', error);
       throw error;
@@ -31,7 +31,7 @@ const vehicleModelService = {
           'Content-Type': 'multipart/form-data',
         },
       });
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
       console.error('Error creating vehicle model:', error);
       throw error;
@@ -58,7 +58,7 @@ const vehicleModelService = {
           'Content-Type': 'multipart/form-data',
         },
       });
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
       console.error('Error updating vehicle model:', error);
       throw error;
@@ -68,7 +68,7 @@ const vehicleModelService = {
   async deleteModel(id) {
     try {
       const response = await api.delete(`vehicle-models/${id}`);
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
       console.error('Error deleting vehicle model:', error);
       throw error;
