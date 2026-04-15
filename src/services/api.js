@@ -17,29 +17,31 @@ export const getAssetUrl = (path) => {
   
   // If it's already an absolute URL
   if (path.startsWith('http')) {
-    // Resilience: if the URL points to /storage/ on our domain, 
-    // it's likely broken due to symlink issues. Convert to /uploads/
+    // Caso especial: La API de Laravel a veces genera URLs con /storage/ 
+    // pero en Hostinger estamos usando /uploads/ directamente.
     if (path.includes('api.kayparts.co/storage/')) {
       return path.replace('/storage/', '/uploads/');
-    }
-
-    // Resilience: replace localhost URLs with production domain
-    if (path.includes('localhost') || path.includes('127.0.0.1')) {
-      return path.replace(/http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/*/,  ASSETS_BASE_URL);
     }
     return path;
   }
 
-  // Clean the path from common prefixes that might be duplicated
-  const cleanPath = path
-    .replace(/^\/+/, '')
-    .replace(/^public\//, '')
-    .replace(/^storage\//, '')
-    .replace(/^uploads\//, '');
+  // Limpiar la ruta de prefijos duplicados o slash inicial
+  let cleanPath = path.trim();
+  
+  // Si la ruta ya contiene 'uploads/', la limpiamos para no duplicarla
+  if (cleanPath.startsWith('uploads/')) {
+    cleanPath = cleanPath.slice(8);
+  } else if (cleanPath.startsWith('/uploads/')) {
+    cleanPath = cleanPath.slice(9);
+  } else if (cleanPath.startsWith('/')) {
+    cleanPath = cleanPath.slice(1);
+  }
 
-  // Reconstruct using the production base URL + uploads folder
+  // Si la ruta empieza con 'product_brands/' etc, pero sin el prefijo uploads
+  // Se asume que viene de la base de datos como ruta relativa al disco uploads
   return `${ASSETS_BASE_URL}uploads/${cleanPath}`;
 };
+
 
 const api = axios.create({
   baseURL: API_BASE_URL,
