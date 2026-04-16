@@ -31,11 +31,25 @@ export default function RootLayout({ children }) {
       */}
       <body className={`${inter.variable} ${outfit.variable}`}>
         <script dangerouslySetInnerHTML={{ __html: `
-          // Panic Reset Logic: Si el usuario entra con ?reset=true, limpiamos todo
+          window.KAYPARTS_DEBUG = true;
+          console.log("KAYPARTS_INIT: Starting root layout...");
+          
+          // Capturar errores globales para ver qué rompe la hidratación
+          window.onerror = function(msg, url, line) {
+            console.error("KAYPARTS_CRASH:", msg, "at", url, ":", line);
+            return false;
+          };
+
+          window.onunhandledrejection = function(event) {
+            console.error("KAYPARTS_PROMISE_CRASH:", event.reason);
+          };
+
+          // Auto-Recuperación: Si detectamos reset=true, limpiamos TODO
           if (window.location.search.includes('reset=true')) {
+            console.warn("KAYPARTS_RESET: Performed manual cleanup");
             localStorage.clear();
             sessionStorage.clear();
-            document.cookie.split(";").forEach((c) => { 
+            document.cookie.split(";").forEach(c => { 
                 document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
             });
             window.location.href = window.location.pathname;
