@@ -23,6 +23,12 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="es">
+      {/* 
+          SECURITY_PATCH_2026_04_16: 
+          - IMPLEMENTED PANIC RESET (?reset=true)
+          - HARDENED AUTH INITIALIZATION
+          - FIXED INFINITE LOADING SPINNER
+      */}
       <body className={`${inter.variable} ${outfit.variable}`}>
         <script dangerouslySetInnerHTML={{ __html: `
           // Panic Reset Logic: Si el usuario entra con ?reset=true, limpiamos todo
