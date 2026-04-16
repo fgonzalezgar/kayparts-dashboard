@@ -316,18 +316,47 @@ const LoginForm = () => {
 };
 
 const LoginPage = () => {
+  const [showFallback, setShowFallback] = React.useState(false);
+
+  React.useEffect(() => {
+    // Si después de 8 segundos React no ha renderizado el formulario completo,
+    // mostramos un mensaje de ayuda o el fallback.
+    const timer = setTimeout(() => setShowFallback(true), 8000);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <div style={{ backgroundColor: 'white', minHeight: '100vh' }}>
-      <Suspense fallback={
-        <div style={{ display: "flex", height: "100vh", alignItems: "center", justifyContent: "center", backgroundColor: "white" }}>
-          <div style={{ width: "40px", height: "40px", border: "4px solid #F1F5F9", borderTopColor: "var(--primary)", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-          <style dangerouslySetInnerHTML={{ __html: `
-            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-          `}} />
-        </div>
-      }>
+    <div style={{ backgroundColor: 'white', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Componente principal */}
+      {!showFallback ? (
         <LoginForm />
-      </Suspense>
+      ) : (
+        <div style={{ 
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+          height: '100vh', padding: '20px', textAlign: 'center' 
+        }}>
+          <AlertCircle size={48} color="#EF4444" style={{ marginBottom: '20px' }} />
+          <h2 style={{ fontSize: '24px', fontWeight: '800', color: 'black', marginBottom: '10px' }}>Conexión Inestable con el Servidor</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px', maxWidth: '400px', marginBottom: '24px' }}>
+            Parece que Hostinger está tardando demasiado en responder. Intenta realizar una limpieza forzada para restablecer la aplicación.
+          </p>
+          <div style={{ display: 'flex', gap: '16px' }}>
+            <button 
+              onClick={() => window.location.href = window.location.pathname + '?reset=true'}
+              style={{ padding: '12px 24px', backgroundColor: '#EF4444', color: 'white', borderRadius: '30px', fontWeight: '800', border: 'none', cursor: 'pointer' }}
+            >
+              LIMPIAR ERRORES Y REINTENTAR
+            </button>
+            <button 
+              onClick={() => window.location.reload()}
+              style={{ padding: '12px 24px', backgroundColor: '#F1F5F9', color: 'black', borderRadius: '30px', fontWeight: '800', border: '1px solid #E2E8F0', cursor: 'pointer' }}
+            >
+              RECARGAR PÁGINA
+            </button>
+          </div>
+          <p style={{ marginTop: '40px', fontSize: '10px', color: 'var(--text-muted)' }}>Status: SERVER_LATENCY_DETECTION</p>
+        </div>
+      )}
     </div>
   );
 }
