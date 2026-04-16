@@ -327,34 +327,43 @@ const LoginPage = () => {
 
   return (
     <div style={{ backgroundColor: 'white', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Componente principal */}
+      {/* Componente principal con temporizador de rescate */}
       {!showFallback ? (
         <LoginForm />
       ) : (
         <div style={{ 
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
-          height: '100vh', padding: '20px', textAlign: 'center' 
+          height: '100vh', padding: '20px', textAlign: 'center', backgroundColor: '#F8FAFC' 
         }}>
-          <AlertCircle size={48} color="#EF4444" style={{ marginBottom: '20px' }} />
-          <h2 style={{ fontSize: '24px', fontWeight: '800', color: 'black', marginBottom: '10px' }}>Conexión Inestable con el Servidor</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px', maxWidth: '400px', marginBottom: '24px' }}>
-            Parece que Hostinger está tardando demasiado en responder. Intenta realizar una limpieza forzada para restablecer la aplicación.
-          </p>
-          <div style={{ display: 'flex', gap: '16px' }}>
-            <button 
-              onClick={() => window.location.href = window.location.pathname + '?reset=true'}
-              style={{ padding: '12px 24px', backgroundColor: '#EF4444', color: 'white', borderRadius: '30px', fontWeight: '800', border: 'none', cursor: 'pointer' }}
-            >
-              LIMPIAR ERRORES Y REINTENTAR
-            </button>
-            <button 
-              onClick={() => window.location.reload()}
-              style={{ padding: '12px 24px', backgroundColor: '#F1F5F9', color: 'black', borderRadius: '30px', fontWeight: '800', border: '1px solid #E2E8F0', cursor: 'pointer' }}
-            >
-              RECARGAR PÁGINA
-            </button>
+          <div style={{ padding: '40px', backgroundColor: 'white', borderRadius: '24px', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', border: '1px solid #E2E8F0' }}>
+            <AlertCircle size={64} color="#EF4444" style={{ marginBottom: '24px' }} />
+            <h2 style={{ fontSize: '28px', fontWeight: '900', color: 'black', marginBottom: '16px' }}>ALERTA DE SISTEMA</h2>
+            <p style={{ color: '#64748B', fontSize: '16px', maxWidth: '400px', marginBottom: '32px', lineHeight: '1.6' }}>
+              Hostinger está tardando demasiado en responder o hay archivos dañados en tu navegador. 
+              <strong> Haz clic abajo para reparar el acceso.</strong>
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <button 
+                onClick={() => window.location.href = window.location.pathname + '?reset=true'}
+                style={{ 
+                  padding: '16px 32px', backgroundColor: '#000', color: 'white', borderRadius: '12px', 
+                  fontWeight: '800', border: 'none', cursor: 'pointer', fontSize: '16px',
+                  boxShadow: '0 10px 15px -3px rgba(0,0,0,0.2)' 
+                }}
+              >
+                LIMPIEZA MAESTRA Y REINTENTAR
+              </button>
+              <button 
+                onClick={() => window.location.reload()}
+                style={{ padding: '12px', color: '#64748B', fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                o intentar recargar normalmente
+              </button>
+            </div>
           </div>
-          <p style={{ marginTop: '40px', fontSize: '10px', color: 'var(--text-muted)' }}>Status: SERVER_LATENCY_DETECTION</p>
+          <p style={{ marginTop: '40px', fontSize: '11px', color: '#94A3B8', fontWeight: '600', letterSpacing: '1px' }}>
+            ERRORCODE: PERFORMANCE_LATENCY_DETECTION
+          </p>
         </div>
       )}
     </div>

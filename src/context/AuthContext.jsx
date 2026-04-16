@@ -14,10 +14,11 @@ export const AuthProvider = ({ children }) => {
   // Rehydrate session from localStorage on first mount
   useEffect(() => {
     const initAuth = async () => {
-      // Seguridad: Timer de emergencia para evitar que la app se quede en blanco
+      // Seguridad agresiva: Solo esperamos 3 segundos. Si Hostinger falla, forzamos la carga.
       const safetyTimeout = setTimeout(() => {
+        console.warn("KAYPARTS_WARN: Initial loading exceeded safety threshold. Forcing render.");
         setLoading(false);
-      }, 5000); 
+      }, 3000); 
 
       try {
         const storedToken = localStorage.getItem('kayparts_token');
@@ -26,26 +27,25 @@ export const AuthProvider = ({ children }) => {
         if (storedToken) {
           setToken(storedToken);
           try {
-            // Intentar validar la sesión y traer el usuario actualizado
+            // Validar sesión rápida
             const userData = await authService.getMe();
             const realUser = userData.user || userData.data || userData;
             setUser(realUser);
             localStorage.setItem('kayparts_user', JSON.stringify(realUser));
           } catch (error) {
             console.error('Session validation failed:', error);
-            // Fallback si el token guardado aún parece válido pero la red falló
-            if (storedUser && error.response?.status !== 401) {
+            // Si hay datos locales, los usamos de inmediato
+            if (storedUser) {
               try {
                 setUser(JSON.parse(storedUser));
               } catch (e) {
-                console.error('Corrupt stored user data');
                 localStorage.removeItem('kayparts_user');
               }
             }
           }
         }
       } catch (err) {
-        console.error('Auth initialization error:', err);
+        console.error('CRITICAL_AUTH_INIT_ERROR:', err);
       } finally {
         clearTimeout(safetyTimeout);
         setLoading(false);
