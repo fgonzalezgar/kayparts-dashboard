@@ -153,7 +153,7 @@ const SubcategoriesPage = () => {
     setIsEditing(true);
     setCurrentId(sub.id);
     setFormData({
-      category_id: sub.category_id,
+      category_id: sub.category_id ? sub.category_id.toString() : '',
       name: sub.name,
       description: sub.description || '',
       image: null
