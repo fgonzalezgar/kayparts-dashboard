@@ -143,7 +143,7 @@ const VehicleModelsPage = () => {
     setIsEditing(true);
     setCurrentId(model.id);
     setFormData({
-      brand_id: model.brand_id,
+      brand_id: model.brand_id ? model.brand_id.toString() : '',
       name: model.name,
       description: model.description || '',
       year_from: model.year_from || '',
