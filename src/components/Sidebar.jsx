@@ -1,7 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
+  BarChart3,
+  ShoppingCart,
   Package, 
   Truck, 
   Settings, 
@@ -13,7 +15,9 @@ import {
   GitBranch,
   Calendar,
   Percent,
-  RefreshCw
+  RefreshCw,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
@@ -23,36 +27,64 @@ const Sidebar = () => {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Menú plano superior
+  // Define if the products submenu is open based on current path
+  const subMenuPaths = [
+    '/productos',
+    '/marcas',
+    '/marcas-productos',
+    '/modelos',
+    '/anos',
+    '/cilindrajes',
+    '/categorias',
+    '/subcategorias',
+    '/impuestos'
+  ];
+  
+  const [isProductsOpen, setIsProductsOpen] = useState(
+    subMenuPaths.some(p => pathname.startsWith(p))
+  );
+
   const menuItems = [
-    { icon: <LayoutList size={20} />, label: 'Inventario', path: '/productos' },
-    { icon: <Car size={20} />, label: 'Marcas Vehículos', path: '/marcas' },
-    { icon: <Package size={20} />, label: 'Marcas Productos', path: '/marcas-productos' },
-    { icon: <LayoutList size={20} />, label: 'Modelos', path: '/modelos' },
-    { icon: <Calendar size={20} />, label: 'Años', path: '/anos' },
-    { icon: <GitBranch size={20} />, label: 'Cilindrajes', path: '/cilindrajes' },
-    { icon: <Layers size={20} />, label: 'Categorías', path: '/categorias' },
-    { icon: <GitBranch size={20} />, label: 'Subcategorías', path: '/subcategorias' },
-    { icon: <Percent size={20} />, label: '% Impuestos', path: '/impuestos' },
-    { icon: <PlusCircle size={20} />, label: 'Nuevo Producto', path: '/productos/nuevo' },
+    { icon: <BarChart3 size={20} />, label: 'Dashboard', path: '/dashboard' },
+    { icon: <ShoppingCart size={20} />, label: 'Pedidos', path: '/pedidos' },
+    { 
+      icon: <Package size={20} />, 
+      label: 'Productos', 
+      path: '/productos',
+      hasSubmenu: true,
+      subItems: [
+        { icon: <LayoutList size={16} />, label: 'Inventario', path: '/productos' },
+        { icon: <Car size={16} />, label: 'Marcas Vehículos', path: '/marcas' },
+        { icon: <Package size={16} />, label: 'Marcas Productos', path: '/marcas-productos' },
+        { icon: <LayoutList size={16} />, label: 'Modelos', path: '/modelos' },
+        { icon: <Calendar size={16} />, label: 'Años', path: '/anos' },
+        { icon: <GitBranch size={16} />, label: 'Cilindrajes', path: '/cilindrajes' },
+        { icon: <Layers size={16} />, label: 'Categorías', path: '/categorias' },
+        { icon: <GitBranch size={16} />, label: 'Subcategorías', path: '/subcategorias' },
+        { icon: <Percent size={16} />, label: '% Impuestos', path: '/impuestos' },
+        { icon: <PlusCircle size={16} />, label: 'Nuevo Producto', path: '/productos/nuevo' },
+      ]
+    },
   ];
 
-  // Elemento intermedio antes del botón de sincronización
   const shippingItem = { icon: <Truck size={20} />, label: 'Envíos', path: '/envios' };
 
-  // Menú inferior
   const bottomItems = [
     { icon: <Settings size={20} />, label: 'Ajustes', path: '/ajustes' },
     { icon: <LogOut size={20} />, label: 'Cerrar Sesión', path: '/login' },
   ];
 
   const handleItemClick = (item) => {
-    router.push(item.path);
+    if (item.hasSubmenu) {
+      setIsProductsOpen(!isProductsOpen);
+    } else {
+      router.push(item.path);
+    }
   };
 
-  const checkIsActive = (itemPath) => {
-    if (itemPath === '/productos') {
-      // Activo para inventario e imágenes de edición (pero no creación)
+  const checkIsActive = (itemPath, isSubItem = false) => {
+    if (itemPath === '/productos' && isSubItem) {
+      // Inventory is active on /productos exactly or when editing (but not /productos/nuevo which is Nuevo Producto)
       return pathname === '/productos' || (pathname.startsWith('/productos/editar') && !pathname.startsWith('/productos/nuevo'));
     }
     return pathname === itemPath;
@@ -73,7 +105,7 @@ const Sidebar = () => {
       zIndex: 10
     }}>
       {/* Logo */}
-      <div style={{ padding: '0 24px', marginBottom: '24px', marginTop: '10px' }}>
+      <div style={{ padding: '0 24px', marginBottom: '32px', marginTop: '10px' }}>
         <Image 
           src={logo} 
           alt="Kayparts Logo" 
@@ -90,7 +122,7 @@ const Sidebar = () => {
       {/* Navigation */}
       <nav style={{ flex: 1, padding: '0 12px', overflowY: 'auto' }}>
         {menuItems.map((item) => {
-          const isActive = checkIsActive(item.path);
+          const isActive = !item.hasSubmenu && checkIsActive(item.path);
           return (
             <div key={item.label} style={{ marginBottom: '4px' }}>
               <div 
@@ -98,7 +130,8 @@ const Sidebar = () => {
                 style={{ 
                   display: 'flex',
                   alignItems: 'center',
-                  padding: '10px 16px',
+                  justifyContent: 'space-between',
+                  padding: '12px 16px',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
@@ -115,22 +148,58 @@ const Sidebar = () => {
                   {item.icon}
                   {item.label}
                 </div>
+                {item.hasSubmenu && (
+                  isProductsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />
+                )}
               </div>
+
+              {/* Sub-menu items */}
+              {item.hasSubmenu && isProductsOpen && (
+                <div style={{ marginTop: '4px', paddingLeft: '12px' }}>
+                  {item.subItems.map((subItem) => {
+                    const isSubActive = checkIsActive(subItem.path, true);
+                    return (
+                      <div
+                        key={subItem.label}
+                        onClick={() => router.push(subItem.path)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '10px 16px',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '10px',
+                          fontWeight: isSubActive ? '700' : '600',
+                          color: isSubActive ? 'var(--primary)' : 'var(--text-muted)',
+                          textTransform: 'uppercase',
+                          letterSpacing: '1px',
+                          transition: 'all 0.2s ease',
+                          backgroundColor: isSubActive ? '#FEF2F2' : 'transparent',
+                        }}
+                      >
+                        {subItem.icon}
+                        {subItem.label}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}
 
-        {/* Separador */}
+        {/* Separator */}
         <div style={{ margin: '16px 16px', borderTop: '1px solid #E2E8F0' }} />
 
         {/* Envíos */}
         <div style={{ marginBottom: '4px' }}>
           <div 
-            onClick={() => handleItemClick(shippingItem)}
+            onClick={() => router.push(shippingItem.path)}
             style={{ 
               display: 'flex',
               alignItems: 'center',
-              padding: '10px 16px',
+              padding: '12px 16px',
               borderRadius: '8px',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
@@ -182,7 +251,7 @@ const Sidebar = () => {
           return (
             <div 
               key={item.label}
-              onClick={() => handleItemClick(item)}
+              onClick={() => router.push(item.path)}
               style={{ 
                 display: 'flex',
                 alignItems: 'center',
