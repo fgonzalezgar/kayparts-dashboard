@@ -11,12 +11,18 @@ import {
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 
-const LoginForm = () => {
+const LoginForm = ({ onMounted }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuth();
 
   const [email, setEmail]               = useState('');
+
+  React.useEffect(() => {
+    if (onMounted) {
+      onMounted();
+    }
+  }, [onMounted]);
   const [password, setPassword]         = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember]         = useState(false);
@@ -317,19 +323,33 @@ const LoginForm = () => {
 
 const LoginPage = () => {
   const [showFallback, setShowFallback] = React.useState(false);
+  const [formReady, setFormReady] = React.useState(false);
 
   React.useEffect(() => {
-    // Si después de 8 segundos React no ha renderizado el formulario completo,
-    // mostramos un mensaje de ayuda o el fallback.
-    const timer = setTimeout(() => setShowFallback(true), 8000);
+    if (formReady) return;
+
+    const timer = setTimeout(() => {
+      setShowFallback(true);
+    }, 8000);
+
     return () => clearTimeout(timer);
+  }, [formReady]);
+
+  const handleMounted = React.useCallback(() => {
+    setFormReady(true);
   }, []);
 
   return (
     <div style={{ backgroundColor: 'white', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Componente principal con temporizador de rescate */}
+      {/* Componente principal con temporizador de rescate y Suspense para useSearchParams */}
       {!showFallback ? (
-        <LoginForm />
+        <Suspense fallback={
+          <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC' }}>
+            <div style={{ width: '40px', height: '40px', border: '4px solid #E2E8F0', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          </div>
+        }>
+          <LoginForm onMounted={handleMounted} />
+        </Suspense>
       ) : (
         <div style={{ 
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 

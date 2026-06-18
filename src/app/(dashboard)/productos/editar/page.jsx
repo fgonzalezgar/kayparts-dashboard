@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { 
   Save, 
   X, 
@@ -16,13 +16,15 @@ import {
   Camera,
   Trash2
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import productService from '@/services/productService';
 import subcategoryService from '@/services/subcategoryService';
 
-const CreateProductPage = () => {
+const EditProductForm = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const id = searchParams.get('id');
 
   // ── State variables for selects & option lists ─────────────────────────────
   const [categories, setCategories] = useState([]);
@@ -56,22 +58,22 @@ const CreateProductPage = () => {
   const [isFeatured, setIsFeatured] = useState(false);
 
   // Technical Criteria
-  const [criteria, setCriteria] = useState([
-    { key: 'Lado de montaje', value: '' },
-    { key: 'Tipo de amortiguador', value: '' },
-    { key: 'Tipo de sujeción', value: '' }
-  ]);
+  const [criteria, setCriteria] = useState([]);
 
   // Image Gallery Slots
   const imageSlots = ['LATERAL', 'EMPAQUE', 'FRONTAL', 'TRASERA', 'MOTOR', 'DETALLE'];
   const [files, setFiles] = useState({}); // { SLOT_NAME: File }
   const [previews, setPreviews] = useState({}); // { SLOT_NAME: url_string }
   const [primarySlot, setPrimarySlot] = useState('FRONTAL');
+  
+  // Loading status
+  const [loadingProduct, setLoadingProduct] = useState(true);
 
-  // Load initial dropdowns
+  // Load initial options and product details
   useEffect(() => {
-    const loadDropdownData = async () => {
+    const loadData = async () => {
       try {
+        // Fetch static dropdowns
         const [cats, pBrands, vBrands, years, disps, taxList] = await Promise.all([
           productService.getSelectCategories(),
           productService.getSelectProductBrands(),
@@ -86,12 +88,92 @@ const CreateProductPage = () => {
         setVehicleYears(years);
         setVehicleDisplacements(disps);
         setTaxes(taxList);
+
+        if (id) {
+          // Fetch product details
+          const product = await productService.getProduct(id);
+          
+          setName(product.name || '');
+          setSku(product.sku || '');
+          setPrice(product.price ? product.price.toString() : '');
+          setStock(product.stock ? product.stock.toString() : '0');
+          setPosition(product.position || '');
+          setSide(product.side || '');
+          setTransmission(product.transmission || '');
+          setDescription(product.description || '');
+          setIsFeatured(!!product.is_featured);
+
+          // Populate category & subcategories
+          if (product.category?.id) {
+            const catStr = product.category.id.toString();
+            setCategoryId(catStr);
+            const subs = await subcategoryService.getSubcategories(catStr);
+            setSubcategories(subs);
+            if (product.subcategory?.id) {
+              setSubcategoryId(product.subcategory.id.toString());
+            }
+          }
+
+          // Populate manufacturer
+          if (product.brand?.id) {
+            setProductBrandId(product.brand.id.toString());
+          }
+
+          // Populate vehicle model & make
+          if (product.vehicle_models && product.vehicle_models.length > 0) {
+            const firstModel = product.vehicle_models[0];
+            const brandStr = firstModel.brand_id.toString();
+            setVehicleBrandId(brandStr);
+            const models = await productService.getSelectVehicleModels(brandStr);
+            setVehicleModels(models);
+            setVehicleModelId(firstModel.id.toString());
+          }
+
+          // Populate years, displacements & taxes
+          if (product.vehicle_years) {
+            setSelectedYears(product.vehicle_years.map(y => y.id.toString()));
+          }
+          if (product.vehicle_displacements) {
+            setSelectedDisplacements(product.vehicle_displacements.map(d => d.id.toString()));
+          }
+          if (product.taxes) {
+            setSelectedTaxes(product.taxes.map(t => t.id.toString()));
+          }
+
+          // Populate criteria
+          if (product.criteria && product.criteria.length > 0) {
+            setCriteria(product.criteria.map(c => ({ key: c.key, value: c.value })));
+          } else {
+            setCriteria([
+              { key: 'Lado de montaje', value: '' },
+              { key: 'Tipo de amortiguador', value: '' },
+              { key: 'Tipo de sujeción', value: '' }
+            ]);
+          }
+
+          // Populate images previews
+          if (product.images && product.images.length > 0) {
+            const loadedPreviews = {};
+            product.images.forEach(img => {
+              if (img.label && img.image_url) {
+                loadedPreviews[img.label] = img.image_url;
+                if (img.is_primary) {
+                  setPrimarySlot(img.label);
+                }
+              }
+            });
+            setPreviews(loadedPreviews);
+          }
+        }
       } catch (error) {
-        console.error('Error loading dropdown lists:', error);
+        console.error('Error preloading product data:', error);
+      } finally {
+        setLoadingProduct(false);
       }
     };
-    loadDropdownData();
-  }, []);
+    
+    loadData();
+  }, [id]);
 
   // Fetch subcategories when Category changes
   const handleCategoryChange = async (catId) => {
@@ -126,21 +208,21 @@ const CreateProductPage = () => {
   };
 
   // Toggle helpers
-  const toggleYear = (id) => {
+  const toggleYear = (yearId) => {
     setSelectedYears(prev => 
-      prev.includes(id) ? prev.filter(y => y !== id) : [...prev, id]
+      prev.includes(yearId.toString()) ? prev.filter(y => y !== yearId.toString()) : [...prev, yearId.toString()]
     );
   };
 
-  const toggleDisplacement = (id) => {
+  const toggleDisplacement = (dispId) => {
     setSelectedDisplacements(prev => 
-      prev.includes(id) ? prev.filter(d => d !== id) : [...prev, id]
+      prev.includes(dispId.toString()) ? prev.filter(d => d !== dispId.toString()) : [...prev, dispId.toString()]
     );
   };
 
-  const toggleTax = (id) => {
+  const toggleTax = (taxId) => {
     setSelectedTaxes(prev => 
-      prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
+      prev.includes(taxId.toString()) ? prev.filter(t => t !== taxId.toString()) : [...prev, taxId.toString()]
     );
   };
 
@@ -182,13 +264,12 @@ const CreateProductPage = () => {
     setPreviews(newPreviews);
 
     if (primarySlot === slot) {
-      // Find another slot that has a preview, or default to FRONTAL
       const remainingSlots = Object.keys(newPreviews);
       setPrimarySlot(remainingSlots.length > 0 ? remainingSlots[0] : 'FRONTAL');
     }
   };
 
-  const handlePublish = async (e) => {
+  const handleUpdate = async (e) => {
     e.preventDefault();
     if (!name) return alert('El nombre comercial del producto es obligatorio.');
     if (!categoryId) return alert('La categoría es obligatoria.');
@@ -197,15 +278,20 @@ const CreateProductPage = () => {
     if (!price) return alert('El precio unitario es obligatorio.');
 
     const formData = new FormData();
+    formData.append('_method', 'PUT'); // Laravel bypass for multipart PUT requests
     formData.append('sku', sku);
     formData.append('name', name);
     formData.append('description', description || '');
     formData.append('price', price);
     formData.append('stock', stock || 0);
     formData.append('category_id', categoryId);
-    if (subcategoryId) formData.append('subcategory_id', subcategoryId);
-    if (productBrandId) formData.append('brand_id', productBrandId);
     
+    if (subcategoryId) formData.append('subcategory_id', subcategoryId);
+    else formData.append('subcategory_id', '');
+    
+    if (productBrandId) formData.append('brand_id', productBrandId);
+    else formData.append('brand_id', '');
+
     formData.append('status', 'active');
     formData.append('condition', 'new');
     formData.append('position', position || '');
@@ -213,7 +299,7 @@ const CreateProductPage = () => {
     formData.append('transmission', transmission || '');
     formData.append('is_featured', isFeatured ? 1 : 0);
 
-    // Pivot IDs lists as JSON
+    // Pivot list IDs as JSON
     formData.append('model_ids', JSON.stringify([parseInt(vehicleModelId)]));
     formData.append('vehicle_year_ids', JSON.stringify(selectedYears.map(id => parseInt(id))));
     formData.append('vehicle_displacement_ids', JSON.stringify(selectedDisplacements.map(id => parseInt(id))));
@@ -226,8 +312,10 @@ const CreateProductPage = () => {
     // Images loop
     let principalIndex = -1;
     let idx = 0;
+    
+    // We only send files that are newly uploaded (File instances)
     imageSlots.forEach((slot) => {
-      if (files[slot]) {
+      if (files[slot] instanceof File) {
         formData.append('images[]', files[slot]);
         formData.append('image_labels[]', slot);
         if (slot === primarySlot) {
@@ -242,11 +330,11 @@ const CreateProductPage = () => {
     }
 
     try {
-      await productService.createProduct(formData);
+      await productService.updateProduct(id, formData);
       router.push('/productos');
     } catch (error) {
       console.error(error);
-      alert('Error al publicar producto: ' + (error.response?.data?.message || error.message));
+      alert('Error al actualizar producto: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -279,18 +367,28 @@ const CreateProductPage = () => {
     cursor: 'pointer'
   };
 
+  if (loadingProduct) {
+    return (
+      <div style={{ padding: '60px', textAlign: 'center', color: 'black', fontWeight: '700', fontSize: '18px' }}>
+        Cargando detalles del producto...
+      </div>
+    );
+  }
+
   return (
-    <form onSubmit={handlePublish}>
+    <form onSubmit={handleUpdate}>
       {/* Breadcrumbs & Header */}
       <header style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
               <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--primary)', letterSpacing: '1px' }}>PRODUCTOS</span>
               <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>/</span>
-              <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', letterSpacing: '1px' }}>CREAR NUEVO</span>
+              <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', letterSpacing: '1px' }}>EDITAR FICHA</span>
           </div>
           
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h1 className="title-font" style={{ fontSize: '32px', fontWeight: '900', color: '#0F172A' }}>FICHA TÉCNICA DE PRODUCTO</h1>
+              <h1 className="title-font" style={{ fontSize: '32px', fontWeight: '900', color: '#0F172A' }}>
+                EDITAR: {name.toUpperCase()}
+              </h1>
               <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                   <button 
                     type="button"
@@ -304,7 +402,7 @@ const CreateProductPage = () => {
                     className="btn-primary" 
                     style={{ padding: '12px 24px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}
                   >
-                      <Save size={18} /> PUBLICAR PRODUCTO
+                      <Save size={18} /> GUARDAR CAMBIOS
                   </button>
               </div>
           </div>
@@ -323,7 +421,7 @@ const CreateProductPage = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                   <h3 style={{ fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '1px' }}>Galería de Imágenes</h3>
                   <span style={{ backgroundColor: '#F1F5F9', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: '800', color: 'black' }}>
-                    {Object.keys(files).length}/6 Max
+                    {Object.keys(previews).length}/6 Max
                   </span>
                 </div>
                 
@@ -488,7 +586,7 @@ const CreateProductPage = () => {
                                 required
                               >
                                   <option value="">Seleccionar marca...</option>
-                                  {vehicleBrands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                  {vehicleBrands.map(b => <option key={b.id} value={b.id.toString()}>{b.name}</option>)}
                               </select>
                               <ChevronDown size={18} style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.4, color: 'black' }} />
                           </div>
@@ -504,7 +602,7 @@ const CreateProductPage = () => {
                                 required
                               >
                                   <option value="">{vehicleBrandId ? 'Seleccionar modelo...' : 'Seleccione una marca'}</option>
-                                  {vehicleModels.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                                  {vehicleModels.map(m => <option key={m.id} value={m.id.toString()}>{m.name}</option>)}
                               </select>
                               <ChevronDown size={18} style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.4, color: 'black' }} />
                           </div>
@@ -517,7 +615,7 @@ const CreateProductPage = () => {
                         {vehicleYears.length === 0 ? (
                           <span style={{ fontSize: '13px', color: '#94A3B8' }}>Cargando años...</span>
                         ) : vehicleYears.map(y => {
-                          const isSelected = selectedYears.includes(y.id);
+                          const isSelected = selectedYears.includes(y.id.toString());
                           return (
                             <button
                               type="button"
@@ -549,7 +647,7 @@ const CreateProductPage = () => {
                         {vehicleDisplacements.length === 0 ? (
                           <span style={{ fontSize: '13px', color: '#94A3B8' }}>Cargando cilindrajes...</span>
                         ) : vehicleDisplacements.map(d => {
-                          const isSelected = selectedDisplacements.includes(d.id);
+                          const isSelected = selectedDisplacements.includes(d.id.toString());
                           return (
                             <button
                               type="button"
@@ -586,7 +684,7 @@ const CreateProductPage = () => {
                                 required
                               >
                                   <option value="">Seleccionar categoría...</option>
-                                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                  {categories.map(c => <option key={c.id} value={c.id.toString()}>{c.name}</option>)}
                               </select>
                               <ChevronDown size={18} style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.4, color: 'black' }} />
                           </div>
@@ -601,7 +699,7 @@ const CreateProductPage = () => {
                                 disabled={!categoryId}
                               >
                                   <option value="">{categoryId ? 'Seleccionar subcategoría...' : 'Seleccione una categoría'}</option>
-                                  {subcategories.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                  {subcategories.map(s => <option key={s.id} value={s.id.toString()}>{s.name}</option>)}
                               </select>
                               <ChevronDown size={18} style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.4, color: 'black' }} />
                           </div>
@@ -619,7 +717,7 @@ const CreateProductPage = () => {
                                 required
                               >
                                   <option value="">Seleccionar fabricante...</option>
-                                  {productBrands.map(pb => <option key={pb.id} value={pb.id}>{pb.name}</option>)}
+                                  {productBrands.map(pb => <option key={pb.id} value={pb.id.toString()}>{pb.name}</option>)}
                               </select>
                               <ChevronDown size={18} style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.4, color: 'black' }} />
                           </div>
@@ -706,7 +804,7 @@ const CreateProductPage = () => {
                       <label style={sectionLabelStyle}>Impuestos Aplicables</label>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                         {taxes.map(t => {
-                          const isSelected = selectedTaxes.includes(t.id);
+                          const isSelected = selectedTaxes.includes(t.id.toString());
                           return (
                             <button
                               type="button"
@@ -762,4 +860,17 @@ const CreateProductPage = () => {
   );
 };
 
-export default CreateProductPage;
+const EditProductPage = () => {
+  return (
+    <Suspense fallback={
+      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC' }}>
+        <div style={{ width: '40px', height: '40px', border: '4px solid #E2E8F0', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      </div>
+    }>
+      <EditProductForm />
+    </Suspense>
+  );
+};
+
+export default EditProductPage;
+
