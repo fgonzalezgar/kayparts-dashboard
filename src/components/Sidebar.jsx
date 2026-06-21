@@ -68,6 +68,7 @@ const Sidebar = () => {
   ];
 
   const shippingItem = { icon: <Truck size={20} />, label: 'Envíos', path: '/envios' };
+  const carrierItem = { icon: <Truck size={20} />, label: 'Transportadoras', path: '/transportadoras' };
 
   const bottomItems = [
     { icon: <Settings size={20} />, label: 'Ajustes', path: '/ajustes' },
@@ -215,6 +216,33 @@ const Sidebar = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               {shippingItem.icon}
               {shippingItem.label}
+            </div>
+          </div>
+        </div>
+
+        {/* Transportadoras */}
+        <div style={{ marginBottom: '4px' }}>
+          <div 
+            onClick={() => router.push(carrierItem.path)}
+            style={{ 
+              display: 'flex',
+              alignItems: 'center',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              backgroundColor: checkIsActive(carrierItem.path) ? '#FEF2F2' : 'transparent',
+              color: checkIsActive(carrierItem.path) ? 'var(--primary)' : 'var(--text-main)',
+              fontWeight: checkIsActive(carrierItem.path) ? '700' : '500',
+              borderRight: checkIsActive(carrierItem.path) ? '3px solid var(--primary)' : 'none',
+              textTransform: 'uppercase',
+              fontSize: '11px',
+              letterSpacing: '1px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {carrierItem.icon}
+              {carrierItem.label}
             </div>
           </div>
         </div>
